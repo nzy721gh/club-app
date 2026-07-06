@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
-import type { Member } from "@/lib/types";
+import type { Member, PointTemplate } from "@/lib/types";
 
 const SCANNER_ID = "qr-scanner-region";
 
@@ -23,11 +23,48 @@ export default function ScanPage() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
+  const [templates, setTemplates] = useState<PointTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [templateForm, setTemplateForm] = useState({ name: "", points_delta: 1, reason: "" });
+
   useEffect(() => {
     if (!loading && (!operator || operator.role !== "admin")) {
       router.push("/me");
     }
   }, [loading, operator, router]);
+
+  useEffect(() => {
+    if (operator?.role !== "admin") return;
+    supabase
+      .from("point_templates")
+      .select("*")
+      .order("created_at", { ascending: true })
+      .then(({ data }) => setTemplates(data ?? []));
+  }, [operator]);
+
+  function applyTemplate(t: PointTemplate) {
+    setSelectedTemplateId(t.id);
+    setPoints(t.points_delta);
+    setReason(t.reason);
+  }
+
+  async function addTemplate(e: React.FormEvent) {
+    e.preventDefault();
+    const { data } = await supabase
+      .from("point_templates")
+      .insert(templateForm)
+      .select()
+      .single();
+    if (data) setTemplates([...templates, data]);
+    setTemplateForm({ name: "", points_delta: 1, reason: "" });
+  }
+
+  async function deleteTemplate(id: string) {
+    await supabase.from("point_templates").delete().eq("id", id);
+    setTemplates(templates.filter((t) => t.id !== id));
+    if (selectedTemplateId === id) setSelectedTemplateId(null);
+  }
 
   function stopScanner() {
     const scanner = scannerRef.current;
@@ -103,8 +140,10 @@ export default function ScanPage() {
 
     setMessage(`Added ${points} pts to ${target.name}`);
     setTarget(null);
-    setReason("");
-    setPoints(1);
+    if (!selectedTemplateId) {
+      setReason("");
+      setPoints(1);
+    }
   }
 
   if (loading || !operator) {
@@ -114,6 +153,89 @@ export default function ScanPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-xl font-semibold">Scan to Add Points</h1>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-sm text-foreground/60">Templates</h2>
+          <button
+            onClick={() => setShowTemplateForm(!showTemplateForm)}
+            className="text-sm text-accent"
+          >
+            {showTemplateForm ? "Close" : "Manage"}
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {templates.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => applyTemplate(t)}
+              className={`rounded-xl px-3 py-2 text-sm border ${
+                selectedTemplateId === t.id
+                  ? "border-accent bg-accent/10 text-accent"
+                  : "border-border"
+              }`}
+            >
+              {t.name} ({t.points_delta >= 0 ? "+" : ""}
+              {t.points_delta})
+            </button>
+          ))}
+          {templates.length === 0 && !showTemplateForm && (
+            <p className="text-sm text-foreground/60">No templates yet</p>
+          )}
+        </div>
+
+        {showTemplateForm && (
+          <div className="flex flex-col gap-2 border border-border rounded-xl p-3">
+            <form onSubmit={addTemplate} className="flex flex-col gap-2">
+              <input
+                required
+                placeholder="Template name"
+                value={templateForm.name}
+                onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
+                className="border border-border rounded-xl px-3 py-2 bg-background text-sm"
+              />
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={templateForm.points_delta}
+                  onChange={(e) =>
+                    setTemplateForm({ ...templateForm, points_delta: Number(e.target.value) })
+                  }
+                  className="w-24 border border-border rounded-xl px-3 py-2 bg-background text-sm"
+                />
+                <input
+                  required
+                  placeholder="Reason"
+                  value={templateForm.reason}
+                  onChange={(e) => setTemplateForm({ ...templateForm, reason: e.target.value })}
+                  className="flex-1 min-w-0 border border-border rounded-xl px-3 py-2 bg-background text-sm"
+                />
+              </div>
+              <button className="bg-accent text-white rounded-xl py-2 text-sm font-medium">
+                Add Template
+              </button>
+            </form>
+            {templates.map((t) => (
+              <div
+                key={t.id}
+                className="flex items-center justify-between text-sm px-1"
+              >
+                <span>
+                  {t.name} · {t.reason} · {t.points_delta >= 0 ? "+" : ""}
+                  {t.points_delta}
+                </span>
+                <button
+                  onClick={() => deleteTemplate(t.id)}
+                  className="text-red-600"
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {!target && (
         <div className="flex flex-col gap-3">

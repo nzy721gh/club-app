@@ -31,6 +31,13 @@ export type Reward = {
   stock: number;
 };
 
+export type PointTemplate = {
+  id: string;
+  name: string;
+  points_delta: number;
+  reason: string;
+};
+
 export type PointLog = {
   id: string;
   member_id: string;
