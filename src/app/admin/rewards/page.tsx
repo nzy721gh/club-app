@@ -79,20 +79,24 @@ export default function AdminRewardsPage() {
             className="border border-border rounded-xl px-3 py-2 bg-background"
           />
           <div className="flex gap-2">
-            <input
-              type="number"
-              placeholder="所需积分"
-              value={rewardForm.cost}
-              onChange={(e) => setRewardForm({ ...rewardForm, cost: Number(e.target.value) })}
-              className="flex-1 border border-border rounded-xl px-3 py-2 bg-background"
-            />
-            <input
-              type="number"
-              placeholder="库存"
-              value={rewardForm.stock}
-              onChange={(e) => setRewardForm({ ...rewardForm, stock: Number(e.target.value) })}
-              className="flex-1 border border-border rounded-xl px-3 py-2 bg-background"
-            />
+            <label className="flex-1 min-w-0 text-sm text-foreground/60">
+              所需积分
+              <input
+                type="number"
+                value={rewardForm.cost}
+                onChange={(e) => setRewardForm({ ...rewardForm, cost: Number(e.target.value) })}
+                className="mt-1 w-full border border-border rounded-xl px-3 py-2 bg-background"
+              />
+            </label>
+            <label className="flex-1 min-w-0 text-sm text-foreground/60">
+              库存
+              <input
+                type="number"
+                value={rewardForm.stock}
+                onChange={(e) => setRewardForm({ ...rewardForm, stock: Number(e.target.value) })}
+                className="mt-1 w-full border border-border rounded-xl px-3 py-2 bg-background"
+              />
+            </label>
           </div>
           <button className="bg-accent text-white rounded-xl py-2 font-medium">添加礼品</button>
         </form>
@@ -116,15 +120,17 @@ export default function AdminRewardsPage() {
             onChange={(e) => setAchievementForm({ ...achievementForm, name: e.target.value })}
             className="border border-border rounded-xl px-3 py-2 bg-background"
           />
-          <input
-            type="number"
-            placeholder="达成所需累计积分"
-            value={achievementForm.threshold}
-            onChange={(e) =>
-              setAchievementForm({ ...achievementForm, threshold: Number(e.target.value) })
-            }
-            className="border border-border rounded-xl px-3 py-2 bg-background"
-          />
+          <label className="text-sm text-foreground/60">
+            达成所需累计积分
+            <input
+              type="number"
+              value={achievementForm.threshold}
+              onChange={(e) =>
+                setAchievementForm({ ...achievementForm, threshold: Number(e.target.value) })
+              }
+              className="mt-1 w-full border border-border rounded-xl px-3 py-2 bg-background"
+            />
+          </label>
           <button className="bg-accent text-white rounded-xl py-2 font-medium">添加成就</button>
         </form>
         <ul className="flex flex-col gap-2">

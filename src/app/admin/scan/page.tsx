@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
 import type { Member } from "@/lib/types";
@@ -29,9 +29,17 @@ export default function ScanPage() {
     }
   }, [loading, operator, router]);
 
+  function stopScanner() {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+    if (scanner.getState() === Html5QrcodeScannerState.SCANNING) {
+      scanner.stop().catch(() => {});
+    }
+  }
+
   useEffect(() => {
     return () => {
-      scannerRef.current?.stop().catch(() => {});
+      stopScanner();
     };
   }, []);
 
@@ -45,12 +53,12 @@ export default function ScanPage() {
     try {
       await scanner.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: 220 },
+        { fps: 10, qrbox: { width: 280, height: 180 } },
         async (decodedText) => {
           const match = decodedText.match(/^member:(.+)$/);
           if (!match) return;
 
-          await scanner.stop();
+          stopScanner();
           setScanning(false);
 
           const { data } = await supabase
