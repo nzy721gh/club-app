@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
-import type { Achievement } from "@/lib/types";
+import type { Achievement, PointLog } from "@/lib/types";
 
 export default function MePage() {
   const { member, loading } = useMember();
   const router = useRouter();
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set());
+  const [pointLogs, setPointLogs] = useState<PointLog[]>([]);
 
   useEffect(() => {
     if (!loading && !member) {
@@ -35,6 +36,13 @@ export default function MePage() {
       .then(({ data }) => {
         setUnlockedIds(new Set((data ?? []).map((r) => r.achievement_id)));
       });
+
+    supabase
+      .from("point_logs")
+      .select("*")
+      .eq("member_id", member.id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setPointLogs(data ?? []));
   }, [member]);
 
   if (loading || !member) {
@@ -78,6 +86,36 @@ export default function MePage() {
           })}
           {achievements.length === 0 && (
             <p className="text-sm text-foreground/60">No achievements yet</p>
+          )}
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="font-semibold mb-3">Points History</h2>
+        <ul className="flex flex-col gap-2">
+          {pointLogs.map((log) => (
+            <li
+              key={log.id}
+              className="border border-border rounded-xl px-4 py-3 flex items-center justify-between"
+            >
+              <div>
+                <p className="font-medium">{log.reason}</p>
+                <p className="text-sm text-foreground/60">
+                  {new Date(log.created_at).toLocaleString()}
+                </p>
+              </div>
+              <span
+                className={`text-sm font-medium ${
+                  log.points_delta >= 0 ? "text-primary" : "text-red-600"
+                }`}
+              >
+                {log.points_delta >= 0 ? "+" : ""}
+                {log.points_delta}
+              </span>
+            </li>
+          ))}
+          {pointLogs.length === 0 && (
+            <p className="text-sm text-foreground/60">No points history yet</p>
           )}
         </ul>
       </div>

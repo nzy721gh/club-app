@@ -31,6 +31,14 @@ export type Reward = {
   stock: number;
 };
 
+export type PointLog = {
+  id: string;
+  member_id: string;
+  points_delta: number;
+  reason: string;
+  created_at: string;
+};
+
 export type Redemption = {
   id: string;
   member_id: string;
