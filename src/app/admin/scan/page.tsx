@@ -125,12 +125,22 @@ export default function ScanPage() {
               </div>
             )}
           </div>
-          {!scanning && (
+          {!scanning ? (
             <button
               onClick={startScanning}
               className="bg-accent text-white rounded-xl py-2 font-medium"
             >
               Start Scanning
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                stopScanner();
+                setScanning(false);
+              }}
+              className="border border-border rounded-xl py-2 font-medium"
+            >
+              Cancel
             </button>
           )}
           {scanError && <p className="text-sm text-red-600">{scanError}</p>}
