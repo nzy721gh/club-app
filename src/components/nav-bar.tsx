@@ -21,6 +21,7 @@ export default function NavBar() {
       <div className="max-w-md mx-auto flex items-center justify-between px-4 py-3">
         <div className="flex gap-4 text-sm font-medium">
           <Link href="/me">Me</Link>
+          <Link href="/achievements">Achievements</Link>
           <Link href="/rewards">Rewards</Link>
           {member.role === "admin" && <Link href="/admin/scan">Scan</Link>}
           {member.role === "admin" && <Link href="/admin/rewards">Admin</Link>}

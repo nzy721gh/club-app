@@ -2,16 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
-import type { Achievement, PointLog } from "@/lib/types";
+import type { PointLog } from "@/lib/types";
 
 export default function MePage() {
   const { member, loading } = useMember();
   const router = useRouter();
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set());
   const [pointLogs, setPointLogs] = useState<PointLog[]>([]);
 
   useEffect(() => {
@@ -22,20 +21,6 @@ export default function MePage() {
 
   useEffect(() => {
     if (!member) return;
-
-    supabase
-      .from("achievements")
-      .select("*")
-      .order("threshold", { ascending: true })
-      .then(({ data }) => setAchievements(data ?? []));
-
-    supabase
-      .from("member_achievements")
-      .select("achievement_id")
-      .eq("member_id", member.id)
-      .then(({ data }) => {
-        setUnlockedIds(new Set((data ?? []).map((r) => r.achievement_id)));
-      });
 
     supabase
       .from("point_logs")
@@ -58,37 +43,13 @@ export default function MePage() {
         <p className="text-sm text-foreground/60">Points</p>
       </div>
 
-      <div>
-        <h2 className="font-semibold mb-3">Achievements</h2>
-        <ul className="flex flex-col gap-2">
-          {achievements.map((a) => {
-            const unlocked = unlockedIds.has(a.id);
-            return (
-              <li
-                key={a.id}
-                className={`border border-border rounded-xl px-4 py-3 flex items-center justify-between ${
-                  unlocked ? "" : "opacity-40"
-                }`}
-              >
-                <div>
-                  <p className="font-medium">{a.name}</p>
-                  {a.description && (
-                    <p className="text-sm text-foreground/60">
-                      {a.description}
-                    </p>
-                  )}
-                </div>
-                <span className="text-sm text-primary font-medium">
-                  {unlocked ? "Unlocked" : `Needs ${a.threshold} pts`}
-                </span>
-              </li>
-            );
-          })}
-          {achievements.length === 0 && (
-            <p className="text-sm text-foreground/60">No achievements yet</p>
-          )}
-        </ul>
-      </div>
+      <Link
+        href="/achievements"
+        className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
+      >
+        Achievements
+        <span className="text-foreground/40">&rarr;</span>
+      </Link>
 
       <div>
         <h2 className="font-semibold mb-3">Points History</h2>
