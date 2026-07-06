@@ -27,6 +27,7 @@ export default function ScanPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [showTemplateForm, setShowTemplateForm] = useState(false);
   const [templateForm, setTemplateForm] = useState({ name: "", points_delta: 1, reason: "" });
+  const [templateError, setTemplateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!operator || operator.role !== "admin")) {
@@ -51,11 +52,18 @@ export default function ScanPage() {
 
   async function addTemplate(e: React.FormEvent) {
     e.preventDefault();
-    const { data } = await supabase
+    setTemplateError(null);
+    const { data, error } = await supabase
       .from("point_templates")
       .insert(templateForm)
       .select()
       .single();
+
+    if (error) {
+      setTemplateError(error.message);
+      return;
+    }
+
     if (data) setTemplates([...templates, data]);
     setTemplateForm({ name: "", points_delta: 1, reason: "" });
   }
@@ -215,6 +223,9 @@ export default function ScanPage() {
               <button className="bg-accent text-white rounded-xl py-2 text-sm font-medium">
                 Add Template
               </button>
+              {templateError && (
+                <p className="text-sm text-red-600">{templateError}</p>
+              )}
             </form>
             {templates.map((t) => (
               <div
