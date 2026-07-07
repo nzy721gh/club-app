@@ -8,10 +8,12 @@ import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
 import type { PointLog } from "@/lib/types";
 
+type PointLogWithEvent = PointLog & { events: { name: string } | null };
+
 export default function MePage() {
   const { member, loading } = useMember();
   const router = useRouter();
-  const [pointLogs, setPointLogs] = useState<PointLog[]>([]);
+  const [pointLogs, setPointLogs] = useState<PointLogWithEvent[]>([]);
 
   useEffect(() => {
     if (!loading && !member) {
@@ -24,10 +26,10 @@ export default function MePage() {
 
     supabase
       .from("point_logs")
-      .select("*")
+      .select("*, events(name)")
       .eq("member_id", member.id)
       .order("created_at", { ascending: false })
-      .then(({ data }) => setPointLogs(data ?? []));
+      .then(({ data }) => setPointLogs((data as unknown as PointLogWithEvent[]) ?? []));
   }, [member]);
 
   if (loading || !member) {
@@ -69,6 +71,7 @@ export default function MePage() {
                 <p className="font-medium">{log.reason}</p>
                 <p className="text-sm text-foreground/60">
                   {new Date(log.created_at).toLocaleString()}
+                  {log.events?.name ? ` · ${log.events.name}` : ""}
                 </p>
               </div>
               <span

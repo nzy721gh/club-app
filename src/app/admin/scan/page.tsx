@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
-import type { Member, PointTemplate } from "@/lib/types";
+import type { ClubEvent, Member, PointTemplate } from "@/lib/types";
 
 const SCANNER_ID = "qr-scanner-region";
 
@@ -29,6 +29,9 @@ export default function ScanPage() {
   const [templateForm, setTemplateForm] = useState({ name: "", points_delta: 1, reason: "" });
   const [templateError, setTemplateError] = useState<string | null>(null);
 
+  const [events, setEvents] = useState<ClubEvent[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+
   useEffect(() => {
     if (!loading && (!operator || operator.role !== "admin")) {
       router.push("/me");
@@ -42,6 +45,12 @@ export default function ScanPage() {
       .select("*")
       .order("created_at", { ascending: true })
       .then(({ data }) => setTemplates(data ?? []));
+
+    supabase
+      .from("events")
+      .select("*")
+      .order("event_time", { ascending: false })
+      .then(({ data }) => setEvents(data ?? []));
   }, [operator]);
 
   function applyTemplate(t: PointTemplate) {
@@ -137,6 +146,7 @@ export default function ScanPage() {
       points_delta: points,
       reason,
       operator_id: operator.id,
+      event_id: selectedEventId || null,
     });
 
     setSubmitting(false);
@@ -247,6 +257,22 @@ export default function ScanPage() {
           </div>
         )}
       </div>
+
+      <label className="text-sm text-foreground/60">
+        Event (optional)
+        <select
+          value={selectedEventId}
+          onChange={(e) => setSelectedEventId(e.target.value)}
+          className="mt-1 w-full border border-border rounded-xl px-3 py-2 bg-background"
+        >
+          <option value="">No event</option>
+          {events.map((ev) => (
+            <option key={ev.id} value={ev.id}>
+              {ev.name} ({new Date(ev.event_time).toLocaleDateString()})
+            </option>
+          ))}
+        </select>
+      </label>
 
       {!target && (
         <div className="flex flex-col gap-3">

@@ -44,6 +44,7 @@ export type PointLog = {
   member_id: string;
   points_delta: number;
   reason: string;
+  event_id: string | null;
   created_at: string;
 };
 
