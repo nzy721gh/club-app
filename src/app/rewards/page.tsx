@@ -7,7 +7,7 @@ import { useMember } from "@/lib/use-member";
 import type { Reward } from "@/lib/types";
 
 export default function RewardsPage() {
-  const { member, loading } = useMember();
+  const { member, loading, refresh } = useMember();
   const router = useRouter();
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [message, setMessage] = useState<string | null>(null);
@@ -48,6 +48,7 @@ export default function RewardsPage() {
 
     setMessage(`Successfully redeemed "${reward.name}"`);
     loadRewards();
+    refresh();
   }
 
   if (loading || !member) {
