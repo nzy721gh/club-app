@@ -24,10 +24,7 @@ export default function NavBar() {
           <Link href="/achievements">Achievements</Link>
           <Link href="/rewards">Rewards</Link>
           {member.role === "admin" && <Link href="/admin/scan">Scan</Link>}
-          {member.role === "admin" && <Link href="/admin/rewards">Rewards Admin</Link>}
-          {member.role === "admin" && (
-            <Link href="/admin/achievements">Achievements Admin</Link>
-          )}
+          {member.role === "admin" && <Link href="/admin">Admin</Link>}
         </div>
         <button
           onClick={signOut}
