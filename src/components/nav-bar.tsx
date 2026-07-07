@@ -23,6 +23,7 @@ export default function NavBar() {
         <div className="flex gap-4 text-sm font-medium overflow-x-auto whitespace-nowrap">
           <Link href="/me">Me</Link>
           <Link href="/events">Events</Link>
+          <Link href="/tickets">Tickets</Link>
           <Link href="/more">More</Link>
           {isAdminUser(member) && <Link href="/admin/scan">Scan</Link>}
           {isAdminUser(member) && <Link href="/admin">Admin</Link>}

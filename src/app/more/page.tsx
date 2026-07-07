@@ -36,13 +36,6 @@ export default function MorePage() {
         Achievements
         <span className="text-foreground/40">&rarr;</span>
       </Link>
-      <Link
-        href="/tickets"
-        className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
-      >
-        Tickets
-        <span className="text-foreground/40">&rarr;</span>
-      </Link>
     </div>
   );
 }
