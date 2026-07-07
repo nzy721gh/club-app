@@ -12,7 +12,10 @@ export default function EventsPage() {
   const [events, setEvents] = useState<ClubEvent[]>([]);
   const [ticketedEventIds, setTicketedEventIds] = useState<Set<string>>(new Set());
   const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({});
-  const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [claimingEvent, setClaimingEvent] = useState<ClubEvent | null>(null);
+  const [bringingGuest, setBringingGuest] = useState(false);
+  const [guestName, setGuestName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,7 +35,8 @@ export default function EventsPage() {
     const { data } = await supabase
       .from("tickets")
       .select("event_id")
-      .eq("member_id", member.id);
+      .eq("member_id", member.id)
+      .is("guest_name", null);
     setTicketedEventIds(new Set((data ?? []).map((t) => t.event_id)));
   }
 
@@ -52,25 +56,39 @@ export default function EventsPage() {
     loadTicketCounts();
   }, [member]);
 
-  async function getTicket(eventId: string) {
-    if (!member) return;
+  function openClaimDialog(event: ClubEvent) {
+    setClaimingEvent(event);
+    setBringingGuest(false);
+    setGuestName("");
     setError(null);
-    setClaimingId(eventId);
+  }
 
-    const { error } = await supabase.from("tickets").insert({
-      event_id: eventId,
-      member_id: member.id,
-    });
+  async function confirmClaim(e: React.FormEvent) {
+    e.preventDefault();
+    if (!member || !claimingEvent) return;
+    setError(null);
+    setSubmitting(true);
 
-    setClaimingId(null);
+    const rows = [{ event_id: claimingEvent.id, member_id: member.id, guest_name: null as string | null }];
+    if (bringingGuest && guestName.trim()) {
+      rows.push({ event_id: claimingEvent.id, member_id: member.id, guest_name: guestName.trim() });
+    }
+
+    const { error } = await supabase.from("tickets").insert(rows);
+
+    setSubmitting(false);
 
     if (error) {
       setError(error.message);
       return;
     }
 
-    setTicketedEventIds(new Set([...ticketedEventIds, eventId]));
-    setTicketCounts({ ...ticketCounts, [eventId]: (ticketCounts[eventId] ?? 0) + 1 });
+    setTicketedEventIds(new Set([...ticketedEventIds, claimingEvent.id]));
+    setTicketCounts({
+      ...ticketCounts,
+      [claimingEvent.id]: (ticketCounts[claimingEvent.id] ?? 0) + rows.length,
+    });
+    setClaimingEvent(null);
   }
 
   if (loading || !member) {
@@ -80,7 +98,6 @@ export default function EventsPage() {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">Events</h1>
-      {error && <p className="text-sm text-red-600">{error}</p>}
       <ul className="flex flex-col gap-2">
         {events.map((e) => {
           const hasTicket = ticketedEventIds.has(e.id);
@@ -103,17 +120,11 @@ export default function EventsPage() {
                 )}
               </div>
               <button
-                onClick={() => getTicket(e.id)}
-                disabled={hasTicket || soldOut || claimingId === e.id}
+                onClick={() => openClaimDialog(e)}
+                disabled={hasTicket || soldOut}
                 className="shrink-0 bg-accent text-white rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-40"
               >
-                {hasTicket
-                  ? "Ticket Claimed"
-                  : soldOut
-                    ? "Sold Out"
-                    : claimingId === e.id
-                      ? "Claiming..."
-                      : "Get Ticket"}
+                {hasTicket ? "Ticket Claimed" : soldOut ? "Sold Out" : "Get Ticket"}
               </button>
             </li>
           );
@@ -122,6 +133,55 @@ export default function EventsPage() {
           <p className="text-sm text-foreground/60">No events yet</p>
         )}
       </ul>
+
+      {claimingEvent && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-20">
+          <form
+            onSubmit={confirmClaim}
+            className="bg-background border border-border rounded-2xl p-5 flex flex-col gap-3 max-w-sm w-full"
+          >
+            <p className="font-medium">Get a ticket for &ldquo;{claimingEvent.name}&rdquo;?</p>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={bringingGuest}
+                onChange={(e) => setBringingGuest(e.target.checked)}
+              />
+              Bringing a guest
+            </label>
+
+            {bringingGuest && (
+              <input
+                required
+                placeholder="Guest name"
+                value={guestName}
+                onChange={(e) => setGuestName(e.target.value)}
+                className="border border-border rounded-xl px-3 py-2 bg-background"
+              />
+            )}
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 bg-accent text-white rounded-xl py-2 font-medium disabled:opacity-50"
+              >
+                {submitting ? "Claiming..." : "Confirm"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setClaimingEvent(null)}
+                className="flex-1 border border-border rounded-xl py-2 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

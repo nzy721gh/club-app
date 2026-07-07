@@ -349,9 +349,9 @@ export default function ScanPage() {
             >
               {memberTicket
                 ? memberTicket.status === "valid"
-                  ? "Has a ticket for this event — will be marked used on confirm"
-                  : "Ticket for this event already used"
-                : "No ticket for this event"}
+                  ? "1 ticket"
+                  : "Ticket used"
+                : "No ticket"}
             </p>
           )}
           <div className="text-sm text-foreground/60">

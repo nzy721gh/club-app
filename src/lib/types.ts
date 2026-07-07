@@ -73,6 +73,7 @@ export type Ticket = {
   event_id: string;
   member_id: string;
   status: "valid" | "used";
+  guest_name: string | null;
   created_at: string;
 };
 
