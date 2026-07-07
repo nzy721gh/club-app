@@ -13,8 +13,8 @@ export default function EventsPage() {
   const [ticketedEventIds, setTicketedEventIds] = useState<Set<string>>(new Set());
   const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({});
   const [claimingEvent, setClaimingEvent] = useState<ClubEvent | null>(null);
-  const [bringingGuest, setBringingGuest] = useState(false);
-  const [guestName, setGuestName] = useState("");
+  const [guestCount, setGuestCount] = useState(0);
+  const [guestNames, setGuestNames] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,9 +58,19 @@ export default function EventsPage() {
 
   function openClaimDialog(event: ClubEvent) {
     setClaimingEvent(event);
-    setBringingGuest(false);
-    setGuestName("");
+    setGuestCount(0);
+    setGuestNames([]);
     setError(null);
+  }
+
+  function changeGuestCount(delta: number) {
+    const next = Math.max(0, guestCount + delta);
+    setGuestCount(next);
+    setGuestNames((names) => {
+      const updated = names.slice(0, next);
+      while (updated.length < next) updated.push("");
+      return updated;
+    });
   }
 
   async function confirmClaim(e: React.FormEvent) {
@@ -70,8 +80,10 @@ export default function EventsPage() {
     setSubmitting(true);
 
     const rows = [{ event_id: claimingEvent.id, member_id: member.id, guest_name: null as string | null }];
-    if (bringingGuest && guestName.trim()) {
-      rows.push({ event_id: claimingEvent.id, member_id: member.id, guest_name: guestName.trim() });
+    for (const name of guestNames) {
+      if (name.trim()) {
+        rows.push({ event_id: claimingEvent.id, member_id: member.id, guest_name: name.trim() });
+      }
     }
 
     const { error } = await supabase.from("tickets").insert(rows);
@@ -142,24 +154,43 @@ export default function EventsPage() {
           >
             <p className="font-medium">Get a ticket for &ldquo;{claimingEvent.name}&rdquo;?</p>
 
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={bringingGuest}
-                onChange={(e) => setBringingGuest(e.target.checked)}
-              />
-              Bringing a guest
-            </label>
+            <div className="text-sm text-foreground/60">
+              Guests
+              <div className="mt-1 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => changeGuestCount(-1)}
+                  className="w-10 h-10 shrink-0 border border-border rounded-xl text-lg font-semibold"
+                >
+                  &minus;
+                </button>
+                <span className="flex-1 text-center text-lg font-semibold text-foreground">
+                  {guestCount}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => changeGuestCount(1)}
+                  className="w-10 h-10 shrink-0 border border-border rounded-xl text-lg font-semibold"
+                >
+                  +
+                </button>
+              </div>
+            </div>
 
-            {bringingGuest && (
+            {guestNames.map((name, i) => (
               <input
+                key={i}
                 required
-                placeholder="Guest name"
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
+                placeholder={`Guest name ${i + 1}`}
+                value={name}
+                onChange={(e) =>
+                  setGuestNames((names) =>
+                    names.map((n, idx) => (idx === i ? e.target.value : n))
+                  )
+                }
                 className="border border-border rounded-xl px-3 py-2 bg-background"
               />
-            )}
+            ))}
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 
