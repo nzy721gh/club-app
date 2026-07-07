@@ -47,7 +47,7 @@ export default function MePage() {
 
       <div className="flex flex-col items-center gap-3 border border-border rounded-2xl p-6">
         {member.is_paid && (
-          <span className="bg-accent text-white text-sm font-bold tracking-wide px-4 py-1.5 rounded-full shadow">
+          <span className="bg-accent text-white text-sm font-bold tracking-wide px-4 py-1.5 rounded-full shadow mb-3">
             PAID MEMBER
           </span>
         )}
