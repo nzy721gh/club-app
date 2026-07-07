@@ -18,17 +18,20 @@ export default function NavBar() {
 
   return (
     <nav className="border-b border-border bg-background sticky top-0 z-10">
-      <div className="max-w-md mx-auto flex items-center justify-between px-4 py-3">
-        <div className="flex gap-4 text-sm font-medium">
+      <div className="max-w-md mx-auto flex items-center justify-between px-4 py-3 gap-3">
+        <div className="flex gap-4 text-sm font-medium overflow-x-auto whitespace-nowrap">
           <Link href="/me">Me</Link>
           <Link href="/achievements">Achievements</Link>
           <Link href="/rewards">Rewards</Link>
           {member.role === "admin" && <Link href="/admin/scan">Scan</Link>}
-          {member.role === "admin" && <Link href="/admin/rewards">Admin</Link>}
+          {member.role === "admin" && <Link href="/admin/rewards">Rewards Admin</Link>}
+          {member.role === "admin" && (
+            <Link href="/admin/achievements">Achievements Admin</Link>
+          )}
         </div>
         <button
           onClick={signOut}
-          className="text-sm text-foreground/60 hover:text-accent"
+          className="text-sm text-foreground/60 hover:text-accent shrink-0"
         >
           Sign Out
         </button>

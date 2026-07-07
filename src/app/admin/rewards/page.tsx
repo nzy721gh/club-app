@@ -4,14 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
-import type { Achievement, Reward } from "@/lib/types";
+import type { Reward } from "@/lib/types";
 
 export default function AdminRewardsPage() {
   const { member: operator, loading } = useMember();
   const router = useRouter();
 
   const [rewards, setRewards] = useState<Reward[]>([]);
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [redemptions, setRedemptions] = useState<
     { id: string; created_at: string; status: string; members: { name: string } | null; rewards: { name: string } | null }[]
   >([]);
@@ -20,7 +19,6 @@ export default function AdminRewardsPage() {
   const [rewardImage, setRewardImage] = useState<File | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [rewardError, setRewardError] = useState<string | null>(null);
-  const [achievementForm, setAchievementForm] = useState({ name: "", threshold: 10 });
 
   useEffect(() => {
     if (!loading && (!operator || operator.role !== "admin")) {
@@ -29,19 +27,14 @@ export default function AdminRewardsPage() {
   }, [loading, operator, router]);
 
   async function loadAll() {
-    const [{ data: r }, { data: a }, { data: red }] = await Promise.all([
+    const [{ data: r }, { data: red }] = await Promise.all([
       supabase.from("rewards").select("*").order("cost", { ascending: true }),
-      supabase
-        .from("achievements")
-        .select("*")
-        .order("threshold", { ascending: true }),
       supabase
         .from("redemptions")
         .select("id, created_at, status, members(name), rewards(name)")
         .order("created_at", { ascending: false }),
     ]);
     setRewards(r ?? []);
-    setAchievements(a ?? []);
     setRedemptions(
       (red as unknown as typeof redemptions | null) ?? []
     );
@@ -93,18 +86,6 @@ export default function AdminRewardsPage() {
     loadAll();
   }
 
-  async function addAchievement(e: React.FormEvent) {
-    e.preventDefault();
-    await supabase.from("achievements").insert(achievementForm);
-    setAchievementForm({ name: "", threshold: 10 });
-    loadAll();
-  }
-
-  async function deleteAchievement(id: string) {
-    await supabase.from("achievements").delete().eq("id", id);
-    loadAll();
-  }
-
   if (loading || !operator) {
     return <p className="text-center text-foreground/60">Loading...</p>;
   }
@@ -112,7 +93,7 @@ export default function AdminRewardsPage() {
   return (
     <div className="flex flex-col gap-10">
       <section className="flex flex-col gap-3">
-        <h2 className="font-semibold">Manage Rewards</h2>
+        <h1 className="text-xl font-semibold">Manage Rewards</h1>
         <form onSubmit={addReward} className="flex flex-col gap-2 border border-border rounded-xl p-4">
           <input
             required
@@ -173,39 +154,6 @@ export default function AdminRewardsPage() {
                 <span className="truncate">{r.name} · {r.cost} pts · Stock {r.stock}</span>
               </div>
               <button onClick={() => deleteReward(r.id)} className="text-sm text-red-600 shrink-0">Delete</button>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="font-semibold">Manage Achievements</h2>
-        <form onSubmit={addAchievement} className="flex flex-col gap-2 border border-border rounded-xl p-4">
-          <input
-            required
-            placeholder="Achievement name"
-            value={achievementForm.name}
-            onChange={(e) => setAchievementForm({ ...achievementForm, name: e.target.value })}
-            className="border border-border rounded-xl px-3 py-2 bg-background"
-          />
-          <label className="text-sm text-foreground/60">
-            Points required to unlock
-            <input
-              type="number"
-              value={achievementForm.threshold}
-              onChange={(e) =>
-                setAchievementForm({ ...achievementForm, threshold: Number(e.target.value) })
-              }
-              className="mt-1 w-full border border-border rounded-xl px-3 py-2 bg-background"
-            />
-          </label>
-          <button className="bg-accent text-white rounded-xl py-2 font-medium">Add Achievement</button>
-        </form>
-        <ul className="flex flex-col gap-2">
-          {achievements.map((a) => (
-            <li key={a.id} className="border border-border rounded-xl px-4 py-3 flex items-center justify-between">
-              <span>{a.name} · Needs {a.threshold} pts</span>
-              <button onClick={() => deleteAchievement(a.id)} className="text-sm text-red-600">Delete</button>
             </li>
           ))}
         </ul>
