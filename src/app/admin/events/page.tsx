@@ -7,7 +7,15 @@ import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
 import { isAdminUser, type ClubEvent } from "@/lib/types";
 
-const EMPTY_FORM = { name: "", description: "", location: "", event_time: "", capacity: "" };
+const EMPTY_FORM = {
+  name: "",
+  description: "",
+  location: "",
+  event_time: "",
+  capacity: "",
+  allowGuests: false,
+  maxGuestsPerPerson: "",
+};
 
 function toLocalInputValue(iso: string) {
   const d = new Date(iso);
@@ -51,6 +59,9 @@ export default function AdminEventsPage() {
       location: event.location ?? "",
       event_time: toLocalInputValue(event.event_time),
       capacity: event.capacity !== null ? String(event.capacity) : "",
+      allowGuests: event.allow_guests,
+      maxGuestsPerPerson:
+        event.max_guests_per_person !== null ? String(event.max_guests_per_person) : "",
     });
   }
 
@@ -67,6 +78,11 @@ export default function AdminEventsPage() {
       location: form.location,
       event_time: new Date(form.event_time).toISOString(),
       capacity: form.capacity === "" ? null : Number(form.capacity),
+      allow_guests: form.allowGuests,
+      max_guests_per_person:
+        form.allowGuests && form.maxGuestsPerPerson !== ""
+          ? Number(form.maxGuestsPerPerson)
+          : null,
     };
 
     if (editingId) {
@@ -132,6 +148,24 @@ export default function AdminEventsPage() {
             onChange={(e) => setForm({ ...form, capacity: e.target.value })}
             className="border border-border rounded-xl px-3 py-2 bg-background"
           />
+          <label className="flex items-center gap-2 text-sm text-foreground/60">
+            <input
+              type="checkbox"
+              checked={form.allowGuests}
+              onChange={(e) => setForm({ ...form, allowGuests: e.target.checked })}
+            />
+            Allow guests
+          </label>
+          {form.allowGuests && (
+            <input
+              type="number"
+              min="0"
+              placeholder="Max guests per person (optional, leave blank for unlimited)"
+              value={form.maxGuestsPerPerson}
+              onChange={(e) => setForm({ ...form, maxGuestsPerPerson: e.target.value })}
+              className="border border-border rounded-xl px-3 py-2 bg-background"
+            />
+          )}
           <div className="flex gap-2">
             <button className="flex-1 bg-accent text-white rounded-xl py-2 font-medium">
               {editingId ? "Save Changes" : "Add Event"}
@@ -156,6 +190,13 @@ export default function AdminEventsPage() {
                   {new Date(e.event_time).toLocaleString()}
                   {e.location ? ` · ${e.location}` : ""}
                   {e.capacity !== null ? ` · Capacity ${e.capacity}` : ""}
+                  {e.allow_guests
+                    ? ` · Guests allowed${
+                        e.max_guests_per_person !== null
+                          ? ` (max ${e.max_guests_per_person})`
+                          : ""
+                      }`
+                    : ""}
                 </p>
               </div>
               <div className="flex gap-3 shrink-0">

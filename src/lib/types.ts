@@ -58,6 +58,8 @@ export type ClubEvent = {
   location: string | null;
   event_time: string;
   capacity: number | null;
+  allow_guests: boolean;
+  max_guests_per_person: number | null;
 };
 
 export type Redemption = {

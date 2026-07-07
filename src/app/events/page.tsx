@@ -64,7 +64,8 @@ export default function EventsPage() {
   }
 
   function changeGuestCount(delta: number) {
-    const next = Math.max(0, guestCount + delta);
+    const max = claimingEvent?.max_guests_per_person;
+    const next = Math.max(0, Math.min(max ?? Infinity, guestCount + delta));
     setGuestCount(next);
     setGuestNames((names) => {
       const updated = names.slice(0, next);
@@ -154,43 +155,47 @@ export default function EventsPage() {
           >
             <p className="font-medium">Get a ticket for &ldquo;{claimingEvent.name}&rdquo;?</p>
 
-            <div className="text-sm text-foreground/60">
-              Guests
-              <div className="mt-1 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => changeGuestCount(-1)}
-                  className="w-10 h-10 shrink-0 border border-border rounded-xl text-lg font-semibold"
-                >
-                  &minus;
-                </button>
-                <span className="flex-1 text-center text-lg font-semibold text-foreground">
-                  {guestCount}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => changeGuestCount(1)}
-                  className="w-10 h-10 shrink-0 border border-border rounded-xl text-lg font-semibold"
-                >
-                  +
-                </button>
-              </div>
-            </div>
+            {claimingEvent.allow_guests && (
+              <>
+                <div className="text-sm text-foreground/60">
+                  Guests
+                  <div className="mt-1 flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => changeGuestCount(-1)}
+                      className="w-10 h-10 shrink-0 border border-border rounded-xl text-lg font-semibold"
+                    >
+                      &minus;
+                    </button>
+                    <span className="flex-1 text-center text-lg font-semibold text-foreground">
+                      {guestCount}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => changeGuestCount(1)}
+                      className="w-10 h-10 shrink-0 border border-border rounded-xl text-lg font-semibold"
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
 
-            {guestNames.map((name, i) => (
-              <input
-                key={i}
-                required
-                placeholder={`Guest name ${i + 1}`}
-                value={name}
-                onChange={(e) =>
-                  setGuestNames((names) =>
-                    names.map((n, idx) => (idx === i ? e.target.value : n))
-                  )
-                }
-                className="border border-border rounded-xl px-3 py-2 bg-background"
-              />
-            ))}
+                {guestNames.map((name, i) => (
+                  <input
+                    key={i}
+                    required
+                    placeholder={`Guest name ${i + 1}`}
+                    value={name}
+                    onChange={(e) =>
+                      setGuestNames((names) =>
+                        names.map((n, idx) => (idx === i ? e.target.value : n))
+                      )
+                    }
+                    className="border border-border rounded-xl px-3 py-2 bg-background"
+                  />
+                ))}
+              </>
+            )}
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 
