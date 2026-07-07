@@ -114,6 +114,7 @@ export default function TicketsPage() {
   const { member, loading } = useMember();
   const router = useRouter();
   const [tickets, setTickets] = useState<TicketWithEvent[]>([]);
+  const [activeCategory, setActiveCategory] = useState<Category>("valid");
 
   useEffect(() => {
     if (!loading && !member) router.push("/login");
@@ -143,44 +144,54 @@ export default function TicketsPage() {
     byCategory[getCategory(t)].push(t);
   }
 
+  const activeGroups = groupByEvent(byCategory[activeCategory]);
+
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">My Tickets</h1>
-      {categories.map((category) => {
-        const groups = groupByEvent(byCategory[category]);
-        if (groups.length === 0) return null;
-        return (
-          <div key={category} className="flex flex-col gap-4">
-            <h2 className="font-semibold text-sm text-foreground/60">
-              {CATEGORY_LABELS[category]}
-            </h2>
-            {groups.map((group) => (
-              <div key={group[0].event_id} className="flex flex-col gap-2">
-                {group.length > 1 && (
-                  <p className="text-xs text-foreground/40 text-center">
-                    Swipe to see guest ticket &rarr;
-                  </p>
-                )}
-                <div className="no-scrollbar flex overflow-x-auto snap-x snap-mandatory gap-3 -mx-4 px-4">
-                  {group.map((t) => (
-                    <TicketCard
-                      key={t.id}
-                      ticket={t}
-                      category={category}
-                      holderName={t.guest_name ? `${t.guest_name} (Guest)` : member.name}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+
+      <div className="flex gap-2">
+        {categories.map((category) => (
+          <button
+            key={category}
+            onClick={() => setActiveCategory(category)}
+            className={`flex-1 rounded-xl py-2 text-sm font-medium border ${
+              activeCategory === category
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border text-foreground/60"
+            }`}
+          >
+            {CATEGORY_LABELS[category]} ({byCategory[category].length})
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-4">
+        {activeGroups.map((group) => (
+          <div key={group[0].event_id} className="flex flex-col gap-2">
+            {group.length > 1 && (
+              <p className="text-xs text-foreground/40 text-center">
+                Swipe to see guest ticket &rarr;
+              </p>
+            )}
+            <div className="no-scrollbar flex overflow-x-auto snap-x snap-mandatory gap-3 -mx-4 px-4">
+              {group.map((t) => (
+                <TicketCard
+                  key={t.id}
+                  ticket={t}
+                  category={activeCategory}
+                  holderName={t.guest_name ? `${t.guest_name} (Guest)` : member.name}
+                />
+              ))}
+            </div>
           </div>
-        );
-      })}
-      {tickets.length === 0 && (
-        <p className="text-sm text-foreground/60">
-          No tickets yet. Get one from the Events page.
-        </p>
-      )}
+        ))}
+        {activeGroups.length === 0 && (
+          <p className="text-sm text-foreground/60">
+            No {CATEGORY_LABELS[activeCategory].toLowerCase()} tickets.
+          </p>
+        )}
+      </div>
     </div>
   );
 }
