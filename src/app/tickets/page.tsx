@@ -42,21 +42,46 @@ function TicketCard({
   category: Category;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const [sharing, setSharing] = useState(false);
+
+  async function shareAsText() {
+    const text = `${ticket.events?.name ?? "Event"} ticket for ${holderName}${
+      ticket.events?.event_time
+        ? ` — ${new Date(ticket.events.event_time).toLocaleString()}`
+        : ""
+    }`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: ticket.events?.name ?? "Ticket", text });
+      } catch {
+        // user cancelled the share sheet, nothing to do
+      }
+      return;
+    }
+
+    await navigator.clipboard.writeText(text);
+  }
 
   async function share() {
     const node = cardRef.current;
-    if (!node) return;
+    if (!node || sharing) return;
+    setSharing(true);
 
-    const canvas = await html2canvas(node, {
-      backgroundColor: getComputedStyle(document.body).backgroundColor,
-      ignoreElements: (el) => el.classList.contains("no-capture"),
-      scale: 2,
-    });
+    try {
+      const canvas = await html2canvas(node, {
+        backgroundColor: "#faf9f7",
+        ignoreElements: (el) => el.classList.contains("no-capture"),
+        scale: 2,
+      });
 
-    const fileName = `${ticket.events?.name ?? "ticket"}.png`;
+      const fileName = `${ticket.events?.name ?? "ticket"}.png`;
 
-    canvas.toBlob(async (blob) => {
-      if (!blob) return;
+      const blob: Blob | null = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/png")
+      );
+      if (!blob) throw new Error("Could not generate image");
+
       const file = new File([blob], fileName, { type: "image/png" });
 
       if (navigator.canShare?.({ files: [file] })) {
@@ -65,14 +90,18 @@ function TicketCard({
         } catch {
           // user cancelled the share sheet, nothing to do
         }
-        return;
+      } else {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
       }
-
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = fileName;
-      link.click();
-    }, "image/png");
+    } catch (err) {
+      console.error("Failed to capture ticket image, falling back to text share", err);
+      await shareAsText();
+    } finally {
+      setSharing(false);
+    }
   }
 
   return (
@@ -107,9 +136,10 @@ function TicketCard({
           <QRCodeSVG value={`ticket:${ticket.id}`} size={150} />
           <button
             onClick={share}
-            className="no-capture text-sm text-accent font-medium border border-border rounded-xl px-4 py-1.5"
+            disabled={sharing}
+            className="no-capture text-sm text-accent font-medium border border-border rounded-xl px-4 py-1.5 disabled:opacity-50"
           >
-            Share
+            {sharing ? "Preparing..." : "Share"}
           </button>
         </div>
       </div>
