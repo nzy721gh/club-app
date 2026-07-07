@@ -57,6 +57,7 @@ export type ClubEvent = {
   description: string | null;
   location: string | null;
   event_time: string;
+  capacity: number | null;
 };
 
 export type Redemption = {

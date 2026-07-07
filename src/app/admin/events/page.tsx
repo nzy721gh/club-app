@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
 import { isAdminUser, type ClubEvent } from "@/lib/types";
 
-const EMPTY_FORM = { name: "", description: "", location: "", event_time: "" };
+const EMPTY_FORM = { name: "", description: "", location: "", event_time: "", capacity: "" };
 
 function toLocalInputValue(iso: string) {
   const d = new Date(iso);
@@ -50,6 +50,7 @@ export default function AdminEventsPage() {
       description: event.description ?? "",
       location: event.location ?? "",
       event_time: toLocalInputValue(event.event_time),
+      capacity: event.capacity !== null ? String(event.capacity) : "",
     });
   }
 
@@ -61,8 +62,11 @@ export default function AdminEventsPage() {
   async function saveEvent(e: React.FormEvent) {
     e.preventDefault();
     const payload = {
-      ...form,
+      name: form.name,
+      description: form.description,
+      location: form.location,
       event_time: new Date(form.event_time).toISOString(),
+      capacity: form.capacity === "" ? null : Number(form.capacity),
     };
 
     if (editingId) {
@@ -120,6 +124,14 @@ export default function AdminEventsPage() {
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="border border-border rounded-xl px-3 py-2 bg-background"
           />
+          <input
+            type="number"
+            min="0"
+            placeholder="Capacity (optional, leave blank for unlimited)"
+            value={form.capacity}
+            onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+            className="border border-border rounded-xl px-3 py-2 bg-background"
+          />
           <div className="flex gap-2">
             <button className="flex-1 bg-accent text-white rounded-xl py-2 font-medium">
               {editingId ? "Save Changes" : "Add Event"}
@@ -143,6 +155,7 @@ export default function AdminEventsPage() {
                 <p className="text-sm text-foreground/60">
                   {new Date(e.event_time).toLocaleString()}
                   {e.location ? ` · ${e.location}` : ""}
+                  {e.capacity !== null ? ` · Capacity ${e.capacity}` : ""}
                 </p>
               </div>
               <div className="flex gap-3 shrink-0">

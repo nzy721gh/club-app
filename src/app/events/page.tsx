@@ -11,6 +11,7 @@ export default function EventsPage() {
   const router = useRouter();
   const [events, setEvents] = useState<ClubEvent[]>([]);
   const [ticketedEventIds, setTicketedEventIds] = useState<Set<string>>(new Set());
+  const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({});
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,10 +36,20 @@ export default function EventsPage() {
     setTicketedEventIds(new Set((data ?? []).map((t) => t.event_id)));
   }
 
+  async function loadTicketCounts() {
+    const { data } = await supabase.rpc("get_event_ticket_counts");
+    const counts: Record<string, number> = {};
+    for (const row of data ?? []) {
+      counts[row.event_id] = Number(row.ticket_count);
+    }
+    setTicketCounts(counts);
+  }
+
   useEffect(() => {
     if (!member) return;
     loadEvents();
     loadTickets();
+    loadTicketCounts();
   }, [member]);
 
   async function getTicket(eventId: string) {
@@ -59,6 +70,7 @@ export default function EventsPage() {
     }
 
     setTicketedEventIds(new Set([...ticketedEventIds, eventId]));
+    setTicketCounts({ ...ticketCounts, [eventId]: (ticketCounts[eventId] ?? 0) + 1 });
   }
 
   if (loading || !member) {
@@ -72,6 +84,8 @@ export default function EventsPage() {
       <ul className="flex flex-col gap-2">
         {events.map((e) => {
           const hasTicket = ticketedEventIds.has(e.id);
+          const claimed = ticketCounts[e.id] ?? 0;
+          const soldOut = e.capacity !== null && claimed >= e.capacity;
           return (
             <li
               key={e.id}
@@ -82,6 +96,7 @@ export default function EventsPage() {
                 <p className="text-sm text-foreground/60">
                   {new Date(e.event_time).toLocaleString()}
                   {e.location ? ` · ${e.location}` : ""}
+                  {e.capacity !== null ? ` · ${claimed}/${e.capacity} claimed` : ""}
                 </p>
                 {e.description && (
                   <p className="text-sm text-foreground/60 mt-1">{e.description}</p>
@@ -89,14 +104,16 @@ export default function EventsPage() {
               </div>
               <button
                 onClick={() => getTicket(e.id)}
-                disabled={hasTicket || claimingId === e.id}
+                disabled={hasTicket || soldOut || claimingId === e.id}
                 className="shrink-0 bg-accent text-white rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-40"
               >
                 {hasTicket
                   ? "Ticket Claimed"
-                  : claimingId === e.id
-                    ? "Claiming..."
-                    : "Get Ticket"}
+                  : soldOut
+                    ? "Sold Out"
+                    : claimingId === e.id
+                      ? "Claiming..."
+                      : "Get Ticket"}
               </button>
             </li>
           );
