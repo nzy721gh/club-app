@@ -12,9 +12,10 @@ const EMPTY_FORM = {
   description: "",
   location: "",
   event_time: "",
+  end_time: "",
   capacity: "",
   allowGuests: false,
-  maxGuestsPerPerson: "",
+  maxGuestsPerPerson: 0,
 };
 
 function toLocalInputValue(iso: string) {
@@ -58,10 +59,10 @@ export default function AdminEventsPage() {
       description: event.description ?? "",
       location: event.location ?? "",
       event_time: toLocalInputValue(event.event_time),
+      end_time: event.end_time ? toLocalInputValue(event.end_time) : "",
       capacity: event.capacity !== null ? String(event.capacity) : "",
       allowGuests: event.allow_guests,
-      maxGuestsPerPerson:
-        event.max_guests_per_person !== null ? String(event.max_guests_per_person) : "",
+      maxGuestsPerPerson: event.max_guests_per_person ?? 0,
     });
   }
 
@@ -77,12 +78,11 @@ export default function AdminEventsPage() {
       description: form.description,
       location: form.location,
       event_time: new Date(form.event_time).toISOString(),
+      end_time: form.end_time === "" ? null : new Date(form.end_time).toISOString(),
       capacity: form.capacity === "" ? null : Number(form.capacity),
       allow_guests: form.allowGuests,
       max_guests_per_person:
-        form.allowGuests && form.maxGuestsPerPerson !== ""
-          ? Number(form.maxGuestsPerPerson)
-          : null,
+        form.allowGuests && form.maxGuestsPerPerson > 0 ? form.maxGuestsPerPerson : null,
     };
 
     if (editingId) {
@@ -121,13 +121,26 @@ export default function AdminEventsPage() {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="border border-border rounded-xl px-3 py-2 bg-background"
           />
-          <input
-            required
-            type="datetime-local"
-            value={form.event_time}
-            onChange={(e) => setForm({ ...form, event_time: e.target.value })}
-            className="w-full min-w-0 border border-border rounded-xl px-3 py-2 bg-background"
-          />
+          <label className="text-sm text-foreground/60">
+            Start time
+            <input
+              required
+              type="datetime-local"
+              value={form.event_time}
+              onChange={(e) => setForm({ ...form, event_time: e.target.value })}
+              className="mt-1 w-full min-w-0 border border-border rounded-xl px-3 py-2 bg-background"
+            />
+          </label>
+          <label className="text-sm text-foreground/60">
+            End time
+            <input
+              required
+              type="datetime-local"
+              value={form.end_time}
+              onChange={(e) => setForm({ ...form, end_time: e.target.value })}
+              className="mt-1 w-full min-w-0 border border-border rounded-xl px-3 py-2 bg-background"
+            />
+          </label>
           <input
             placeholder="Location (optional)"
             value={form.location}
@@ -157,14 +170,35 @@ export default function AdminEventsPage() {
             Allow guests
           </label>
           {form.allowGuests && (
-            <input
-              type="number"
-              min="0"
-              placeholder="Max guests per person (optional, leave blank for unlimited)"
-              value={form.maxGuestsPerPerson}
-              onChange={(e) => setForm({ ...form, maxGuestsPerPerson: e.target.value })}
-              className="border border-border rounded-xl px-3 py-2 bg-background"
-            />
+            <div className="text-sm text-foreground/60">
+              Max guests per person
+              <div className="mt-1 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm({
+                      ...form,
+                      maxGuestsPerPerson: Math.max(0, form.maxGuestsPerPerson - 1),
+                    })
+                  }
+                  className="w-10 h-10 shrink-0 border border-border rounded-xl text-lg font-semibold"
+                >
+                  &minus;
+                </button>
+                <span className="flex-1 text-center text-lg font-semibold text-foreground">
+                  {form.maxGuestsPerPerson === 0 ? "Unlimited" : form.maxGuestsPerPerson}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm({ ...form, maxGuestsPerPerson: form.maxGuestsPerPerson + 1 })
+                  }
+                  className="w-10 h-10 shrink-0 border border-border rounded-xl text-lg font-semibold"
+                >
+                  +
+                </button>
+              </div>
+            </div>
           )}
           <div className="flex gap-2">
             <button className="flex-1 bg-accent text-white rounded-xl py-2 font-medium">
@@ -188,6 +222,7 @@ export default function AdminEventsPage() {
                 <p className="font-medium truncate">{e.name}</p>
                 <p className="text-sm text-foreground/60">
                   {new Date(e.event_time).toLocaleString()}
+                  {e.end_time ? ` – ${new Date(e.end_time).toLocaleString()}` : ""}
                   {e.location ? ` · ${e.location}` : ""}
                   {e.capacity !== null ? ` · Capacity ${e.capacity}` : ""}
                   {e.allow_guests

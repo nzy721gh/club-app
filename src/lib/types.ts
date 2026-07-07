@@ -57,6 +57,7 @@ export type ClubEvent = {
   description: string | null;
   location: string | null;
   event_time: string;
+  end_time: string | null;
   capacity: number | null;
   allow_guests: boolean;
   max_guests_per_person: number | null;

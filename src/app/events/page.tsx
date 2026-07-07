@@ -125,6 +125,7 @@ export default function EventsPage() {
                 <p className="font-medium truncate">{e.name}</p>
                 <p className="text-sm text-foreground/60">
                   {new Date(e.event_time).toLocaleString()}
+                  {e.end_time ? ` – ${new Date(e.end_time).toLocaleString()}` : ""}
                   {e.location ? ` · ${e.location}` : ""}
                   {e.capacity !== null ? ` · ${claimed}/${e.capacity} claimed` : ""}
                 </p>
