@@ -23,6 +23,13 @@ export default function AdminPage() {
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">Admin</h1>
       <Link
+        href="/admin/events"
+        className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
+      >
+        Manage Events
+        <span className="text-foreground/40">&rarr;</span>
+      </Link>
+      <Link
         href="/admin/rewards"
         className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
       >

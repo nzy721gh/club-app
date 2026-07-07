@@ -47,6 +47,14 @@ export type PointLog = {
   created_at: string;
 };
 
+export type ClubEvent = {
+  id: string;
+  name: string;
+  description: string | null;
+  location: string | null;
+  event_time: string;
+};
+
 export type Redemption = {
   id: string;
   member_id: string;
