@@ -170,8 +170,6 @@ export default function ScanPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">Scan to Add Points</h1>
-
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold text-sm text-foreground/60">Templates</h2>
