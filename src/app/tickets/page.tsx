@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
+import html2canvas from "html2canvas";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
 import type { Ticket } from "@/lib/types";
@@ -40,27 +41,43 @@ function TicketCard({
   holderName: string;
   category: Category;
 }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
   async function share() {
-    const text = `${ticket.events?.name ?? "Event"} ticket for ${holderName}${
-      ticket.events?.event_time
-        ? ` — ${new Date(ticket.events.event_time).toLocaleString()}`
-        : ""
-    }`;
+    const node = cardRef.current;
+    if (!node) return;
 
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: ticket.events?.name ?? "Ticket", text });
-      } catch {
-        // user cancelled the share sheet, nothing to do
+    const canvas = await html2canvas(node, {
+      backgroundColor: getComputedStyle(document.body).backgroundColor,
+      ignoreElements: (el) => el.classList.contains("no-capture"),
+      scale: 2,
+    });
+
+    const fileName = `${ticket.events?.name ?? "ticket"}.png`;
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const file = new File([blob], fileName, { type: "image/png" });
+
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: ticket.events?.name ?? "Ticket" });
+        } catch {
+          // user cancelled the share sheet, nothing to do
+        }
+        return;
       }
-      return;
-    }
 
-    await navigator.clipboard.writeText(text);
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+    }, "image/png");
   }
 
   return (
     <div
+      ref={cardRef}
       className={`snap-center shrink-0 w-full relative rounded-2xl border border-border overflow-hidden bg-background ${
         category !== "valid" ? "opacity-50" : ""
       }`}
@@ -90,7 +107,7 @@ function TicketCard({
           <QRCodeSVG value={`ticket:${ticket.id}`} size={150} />
           <button
             onClick={share}
-            className="text-sm text-accent font-medium border border-border rounded-xl px-4 py-1.5"
+            className="no-capture text-sm text-accent font-medium border border-border rounded-xl px-4 py-1.5"
           >
             Share
           </button>
