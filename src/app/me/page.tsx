@@ -14,6 +14,7 @@ export default function MePage() {
   const { member, loading } = useMember();
   const router = useRouter();
   const [pointLogs, setPointLogs] = useState<PointLogWithEvent[]>([]);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   useEffect(() => {
     if (!loading && !member) {
@@ -65,9 +66,21 @@ export default function MePage() {
       </div>
 
       <div>
-        <h2 className="font-semibold mb-3">Points History</h2>
+        <button
+          onClick={() => setShowAllHistory(!showAllHistory)}
+          className="w-full flex items-center justify-between mb-3"
+        >
+          <h2 className="font-semibold">Points History</h2>
+          <span
+            className={`text-foreground/40 transition-transform ${
+              showAllHistory ? "rotate-90" : ""
+            }`}
+          >
+            &gt;
+          </span>
+        </button>
         <ul className="flex flex-col gap-2">
-          {pointLogs.map((log) => (
+          {(showAllHistory ? pointLogs : pointLogs.slice(0, 3)).map((log) => (
             <li
               key={log.id}
               className="border border-border rounded-xl px-4 py-3 flex items-center justify-between"
