@@ -7,17 +7,23 @@ import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
 import type { ClubEvent } from "@/lib/types";
 
+const EMPTY_FORM = { name: "", description: "", location: "", event_time: "" };
+
+function toLocalInputValue(iso: string) {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
+}
+
 export default function AdminEventsPage() {
   const { member: operator, loading } = useMember();
   const router = useRouter();
 
   const [events, setEvents] = useState<ClubEvent[]>([]);
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    location: "",
-    event_time: "",
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!operator || operator.role !== "admin")) {
@@ -37,18 +43,42 @@ export default function AdminEventsPage() {
     if (operator?.role === "admin") loadEvents();
   }, [operator]);
 
-  async function addEvent(e: React.FormEvent) {
+  function startEdit(event: ClubEvent) {
+    setEditingId(event.id);
+    setForm({
+      name: event.name,
+      description: event.description ?? "",
+      location: event.location ?? "",
+      event_time: toLocalInputValue(event.event_time),
+    });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+  }
+
+  async function saveEvent(e: React.FormEvent) {
     e.preventDefault();
-    await supabase.from("events").insert({
+    const payload = {
       ...form,
       event_time: new Date(form.event_time).toISOString(),
-    });
-    setForm({ name: "", description: "", location: "", event_time: "" });
+    };
+
+    if (editingId) {
+      await supabase.from("events").update(payload).eq("id", editingId);
+    } else {
+      await supabase.from("events").insert(payload);
+    }
+
+    setEditingId(null);
+    setForm(EMPTY_FORM);
     loadEvents();
   }
 
   async function deleteEvent(id: string) {
     await supabase.from("events").delete().eq("id", id);
+    if (editingId === id) cancelEdit();
     loadEvents();
   }
 
@@ -63,7 +93,7 @@ export default function AdminEventsPage() {
       </Link>
       <section className="flex flex-col gap-3">
         <h1 className="text-xl font-semibold">Manage Events</h1>
-        <form onSubmit={addEvent} className="flex flex-col gap-2 border border-border rounded-xl p-4">
+        <form onSubmit={saveEvent} className="flex flex-col gap-2 border border-border rounded-xl p-4">
           <input
             required
             placeholder="Event name"
@@ -71,16 +101,13 @@ export default function AdminEventsPage() {
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             className="border border-border rounded-xl px-3 py-2 bg-background"
           />
-          <label className="text-sm text-foreground/60">
-            Date and time
-            <input
-              required
-              type="datetime-local"
-              value={form.event_time}
-              onChange={(e) => setForm({ ...form, event_time: e.target.value })}
-              className="mt-1 w-full border border-border rounded-xl px-3 py-2 bg-background"
-            />
-          </label>
+          <input
+            required
+            type="datetime-local"
+            value={form.event_time}
+            onChange={(e) => setForm({ ...form, event_time: e.target.value })}
+            className="w-full min-w-0 border border-border rounded-xl px-3 py-2 bg-background"
+          />
           <input
             placeholder="Location (optional)"
             value={form.location}
@@ -93,19 +120,35 @@ export default function AdminEventsPage() {
             onChange={(e) => setForm({ ...form, description: e.target.value })}
             className="border border-border rounded-xl px-3 py-2 bg-background"
           />
-          <button className="bg-accent text-white rounded-xl py-2 font-medium">Add Event</button>
+          <div className="flex gap-2">
+            <button className="flex-1 bg-accent text-white rounded-xl py-2 font-medium">
+              {editingId ? "Save Changes" : "Add Event"}
+            </button>
+            {editingId && (
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="flex-1 border border-border rounded-xl py-2 font-medium"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
         <ul className="flex flex-col gap-2">
           {events.map((e) => (
-            <li key={e.id} className="border border-border rounded-xl px-4 py-3 flex items-center justify-between">
-              <div>
-                <p className="font-medium">{e.name}</p>
+            <li key={e.id} className="border border-border rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-medium truncate">{e.name}</p>
                 <p className="text-sm text-foreground/60">
                   {new Date(e.event_time).toLocaleString()}
                   {e.location ? ` · ${e.location}` : ""}
                 </p>
               </div>
-              <button onClick={() => deleteEvent(e.id)} className="text-sm text-red-600">Delete</button>
+              <div className="flex gap-3 shrink-0">
+                <button onClick={() => startEdit(e)} className="text-sm text-accent">Edit</button>
+                <button onClick={() => deleteEvent(e.id)} className="text-sm text-red-600">Delete</button>
+              </div>
             </li>
           ))}
           {events.length === 0 && (
