@@ -12,6 +12,7 @@ export default function RewardsPage() {
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [redeemingId, setRedeemingId] = useState<string | null>(null);
+  const [confirmingReward, setConfirmingReward] = useState<Reward | null>(null);
 
   useEffect(() => {
     if (!loading && !member) router.push("/login");
@@ -31,6 +32,7 @@ export default function RewardsPage() {
 
   async function redeem(reward: Reward) {
     if (!member) return;
+    setConfirmingReward(null);
     setMessage(null);
     setRedeemingId(reward.id);
 
@@ -94,7 +96,7 @@ export default function RewardsPage() {
                 </div>
               </div>
               <button
-                onClick={() => redeem(r)}
+                onClick={() => setConfirmingReward(r)}
                 disabled={!canAfford || redeemingId === r.id}
                 className="bg-accent text-white rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-40"
               >
@@ -107,6 +109,33 @@ export default function RewardsPage() {
           <p className="text-sm text-foreground/60">No rewards yet</p>
         )}
       </ul>
+
+      {confirmingReward && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-20">
+          <div className="bg-background border border-border rounded-2xl p-5 flex flex-col gap-3 max-w-sm w-full">
+            <p className="font-medium">
+              Redeem &ldquo;{confirmingReward.name}&rdquo; for {confirmingReward.cost} pts?
+            </p>
+            <p className="text-sm text-foreground/60">
+              This will deduct {confirmingReward.cost} points from your balance and cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => redeem(confirmingReward)}
+                className="flex-1 bg-accent text-white rounded-xl py-2 font-medium"
+              >
+                Confirm
+              </button>
+              <button
+                onClick={() => setConfirmingReward(null)}
+                className="flex-1 border border-border rounded-xl py-2 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
