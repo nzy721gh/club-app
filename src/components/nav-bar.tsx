@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
+import { isAdminUser } from "@/lib/types";
 
 export default function NavBar() {
   const { member } = useMember();
@@ -24,8 +25,8 @@ export default function NavBar() {
           <Link href="/events">Events</Link>
           <Link href="/achievements">Achievements</Link>
           <Link href="/rewards">Rewards</Link>
-          {member.role === "admin" && <Link href="/admin/scan">Scan</Link>}
-          {member.role === "admin" && <Link href="/admin">Admin</Link>}
+          {isAdminUser(member) && <Link href="/admin/scan">Scan</Link>}
+          {isAdminUser(member) && <Link href="/admin">Admin</Link>}
         </div>
         <button
           onClick={signOut}

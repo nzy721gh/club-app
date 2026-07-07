@@ -76,13 +76,17 @@ export default function SettingsPage() {
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-foreground/60">Membership</span>
-          <span className={member.is_paid ? "text-primary font-medium" : ""}>
-            {member.is_paid ? "Paid Member" : "Free Member"}
+          <span className={member.membership_tier !== "member" ? "text-primary font-medium" : ""}>
+            {member.membership_tier === "committee"
+              ? "Committee"
+              : member.membership_tier === "paid"
+                ? "Paid Member"
+                : "Free Member"}
           </span>
         </div>
       </div>
 
-      {!member.is_paid && (
+      {member.membership_tier === "member" && (
         <form
           onSubmit={redeemCode}
           className="border border-border rounded-xl p-4 flex flex-col gap-2"

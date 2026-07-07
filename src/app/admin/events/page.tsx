@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
-import type { ClubEvent } from "@/lib/types";
+import { isAdminUser, type ClubEvent } from "@/lib/types";
 
 const EMPTY_FORM = { name: "", description: "", location: "", event_time: "" };
 
@@ -26,7 +26,7 @@ export default function AdminEventsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && (!operator || operator.role !== "admin")) {
+    if (!loading && !isAdminUser(operator)) {
       router.push("/me");
     }
   }, [loading, operator, router]);
@@ -40,7 +40,7 @@ export default function AdminEventsPage() {
   }
 
   useEffect(() => {
-    if (operator?.role === "admin") loadEvents();
+    if (isAdminUser(operator)) loadEvents();
   }, [operator]);
 
   function startEdit(event: ClubEvent) {

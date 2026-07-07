@@ -4,13 +4,14 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useMember } from "@/lib/use-member";
+import { isAdminUser } from "@/lib/types";
 
 export default function AdminPage() {
   const { member: operator, loading } = useMember();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!operator || operator.role !== "admin")) {
+    if (!loading && !isAdminUser(operator)) {
       router.push("/me");
     }
   }, [loading, operator, router]);
@@ -41,6 +42,13 @@ export default function AdminPage() {
         className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
       >
         Manage Achievements
+        <span className="text-foreground/40">&rarr;</span>
+      </Link>
+      <Link
+        href="/admin/members"
+        className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
+      >
+        Manage Members
         <span className="text-foreground/40">&rarr;</span>
       </Link>
     </div>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
-import type { Reward } from "@/lib/types";
+import { isAdminUser, type Reward } from "@/lib/types";
 
 export default function AdminRewardsPage() {
   const { member: operator, loading } = useMember();
@@ -22,7 +22,7 @@ export default function AdminRewardsPage() {
   const [rewardError, setRewardError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading && (!operator || operator.role !== "admin")) {
+    if (!loading && !isAdminUser(operator)) {
       router.push("/me");
     }
   }, [loading, operator, router]);
@@ -42,7 +42,7 @@ export default function AdminRewardsPage() {
   }
 
   useEffect(() => {
-    if (operator?.role === "admin") loadAll();
+    if (isAdminUser(operator)) loadAll();
   }, [operator]);
 
   async function addReward(e: React.FormEvent) {

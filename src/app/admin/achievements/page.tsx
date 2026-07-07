@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
-import type { Achievement } from "@/lib/types";
+import { isAdminUser, type Achievement } from "@/lib/types";
 
 export default function AdminAchievementsPage() {
   const { member: operator, loading } = useMember();
@@ -15,7 +15,7 @@ export default function AdminAchievementsPage() {
   const [achievementForm, setAchievementForm] = useState({ name: "", threshold: 10 });
 
   useEffect(() => {
-    if (!loading && (!operator || operator.role !== "admin")) {
+    if (!loading && !isAdminUser(operator)) {
       router.push("/me");
     }
   }, [loading, operator, router]);
@@ -29,7 +29,7 @@ export default function AdminAchievementsPage() {
   }
 
   useEffect(() => {
-    if (operator?.role === "admin") loadAchievements();
+    if (isAdminUser(operator)) loadAchievements();
   }, [operator]);
 
   async function addAchievement(e: React.FormEvent) {

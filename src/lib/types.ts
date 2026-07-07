@@ -1,3 +1,5 @@
+export type MembershipTier = "member" | "paid" | "committee";
+
 export type Member = {
   id: string;
   name: string;
@@ -6,6 +8,7 @@ export type Member = {
   points: number;
   avatar_url: string | null;
   is_paid: boolean;
+  membership_tier: MembershipTier;
   created_at: string;
 };
 
@@ -63,3 +66,7 @@ export type Redemption = {
   status: "pending" | "fulfilled" | "cancelled";
   created_at: string;
 };
+
+export function isAdminUser(member: Member | null | undefined): boolean {
+  return !!member && (member.role === "admin" || member.membership_tier === "committee");
+}

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Html5Qrcode, Html5QrcodeScannerState } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
-import type { ClubEvent, Member, PointTemplate } from "@/lib/types";
+import { isAdminUser, type ClubEvent, type Member, type PointTemplate } from "@/lib/types";
 
 const SCANNER_ID = "qr-scanner-region";
 
@@ -33,13 +33,13 @@ export default function ScanPage() {
   const [selectedEventId, setSelectedEventId] = useState<string>("");
 
   useEffect(() => {
-    if (!loading && (!operator || operator.role !== "admin")) {
+    if (!loading && !isAdminUser(operator)) {
       router.push("/me");
     }
   }, [loading, operator, router]);
 
   useEffect(() => {
-    if (operator?.role !== "admin") return;
+    if (!isAdminUser(operator)) return;
     supabase
       .from("point_templates")
       .select("*")
