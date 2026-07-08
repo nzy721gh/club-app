@@ -61,6 +61,7 @@ export type ClubEvent = {
   capacity: number | null;
   allow_guests: boolean;
   max_guests_per_person: number | null;
+  price: number;
 };
 
 export type Redemption = {
@@ -71,12 +72,16 @@ export type Redemption = {
   created_at: string;
 };
 
+export type PaymentStatus = "not_required" | "pending" | "approved" | "rejected";
+
 export type Ticket = {
   id: string;
   event_id: string;
   member_id: string;
   status: "valid" | "used";
   guest_name: string | null;
+  payment_screenshot_url: string | null;
+  payment_status: PaymentStatus;
   created_at: string;
 };
 

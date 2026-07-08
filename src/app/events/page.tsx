@@ -4,17 +4,18 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
-import type { ClubEvent } from "@/lib/types";
+import type { ClubEvent, PaymentStatus } from "@/lib/types";
 
 export default function EventsPage() {
   const { member, loading } = useMember();
   const router = useRouter();
   const [events, setEvents] = useState<ClubEvent[]>([]);
-  const [ticketedEventIds, setTicketedEventIds] = useState<Set<string>>(new Set());
+  const [myTickets, setMyTickets] = useState<Record<string, { id: string; status: PaymentStatus }>>({});
   const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({});
   const [claimingEvent, setClaimingEvent] = useState<ClubEvent | null>(null);
   const [guestCount, setGuestCount] = useState(0);
   const [guestNames, setGuestNames] = useState<string[]>([]);
+  const [paymentFile, setPaymentFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,10 +35,14 @@ export default function EventsPage() {
     if (!member) return;
     const { data } = await supabase
       .from("tickets")
-      .select("event_id")
+      .select("id, event_id, payment_status")
       .eq("member_id", member.id)
       .is("guest_name", null);
-    setTicketedEventIds(new Set((data ?? []).map((t) => t.event_id)));
+    const map: Record<string, { id: string; status: PaymentStatus }> = {};
+    for (const row of data ?? []) {
+      map[row.event_id] = { id: row.id, status: row.payment_status };
+    }
+    setMyTickets(map);
   }
 
   async function loadTicketCounts() {
@@ -60,6 +65,7 @@ export default function EventsPage() {
     setClaimingEvent(event);
     setGuestCount(0);
     setGuestNames([]);
+    setPaymentFile(null);
     setError(null);
   }
 
@@ -78,16 +84,65 @@ export default function EventsPage() {
     e.preventDefault();
     if (!member || !claimingEvent) return;
     setError(null);
-    setSubmitting(true);
 
-    const rows = [{ event_id: claimingEvent.id, member_id: member.id, guest_name: null as string | null }];
-    for (const name of guestNames) {
-      if (name.trim()) {
-        rows.push({ event_id: claimingEvent.id, member_id: member.id, guest_name: name.trim() });
-      }
+    const isPaid = claimingEvent.price > 0;
+    if (isPaid && !paymentFile) {
+      setError("Please upload a payment screenshot");
+      return;
     }
 
-    const { error } = await supabase.from("tickets").insert(rows);
+    setSubmitting(true);
+
+    let paymentScreenshotUrl: string | null = null;
+    if (isPaid && paymentFile) {
+      const path = `${member.id}/${Date.now()}-${paymentFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from("payment-proofs")
+        .upload(path, paymentFile);
+
+      if (uploadError) {
+        setSubmitting(false);
+        setError(uploadError.message);
+        return;
+      }
+
+      paymentScreenshotUrl = supabase.storage.from("payment-proofs").getPublicUrl(path)
+        .data.publicUrl;
+    }
+
+    const paymentFields = isPaid
+      ? { payment_screenshot_url: paymentScreenshotUrl, payment_status: "pending" as const }
+      : {};
+
+    const existing = myTickets[claimingEvent.id];
+    const isRetry = existing?.status === "rejected";
+
+    const guestRows = guestNames
+      .filter((name) => name.trim())
+      .map((name) => ({
+        event_id: claimingEvent.id,
+        member_id: member.id,
+        guest_name: name.trim(),
+        ...paymentFields,
+      }));
+
+    const { error } = isRetry
+      ? await supabase.from("tickets").update(paymentFields).eq("id", existing.id)
+      : await supabase.from("tickets").insert([
+          {
+            event_id: claimingEvent.id,
+            member_id: member.id,
+            guest_name: null as string | null,
+            ...paymentFields,
+          },
+          ...guestRows,
+        ]);
+
+    const rowCount = guestRows.length + 1;
+
+    if (!error && guestRows.length > 0 && isRetry) {
+      await supabase.from("tickets").insert(guestRows);
+    }
 
     setSubmitting(false);
 
@@ -96,10 +151,17 @@ export default function EventsPage() {
       return;
     }
 
-    setTicketedEventIds(new Set([...ticketedEventIds, claimingEvent.id]));
+    setMyTickets({
+      ...myTickets,
+      [claimingEvent.id]: {
+        id: existing?.id ?? "",
+        status: isPaid ? "pending" : "not_required",
+      },
+    });
+    const newlyAddedRows = isRetry ? guestRows.length : rowCount;
     setTicketCounts({
       ...ticketCounts,
-      [claimingEvent.id]: (ticketCounts[claimingEvent.id] ?? 0) + rows.length,
+      [claimingEvent.id]: (ticketCounts[claimingEvent.id] ?? 0) + newlyAddedRows,
     });
     setClaimingEvent(null);
   }
@@ -108,14 +170,25 @@ export default function EventsPage() {
     return <p className="text-center text-foreground/60">Loading...</p>;
   }
 
+  function claimButtonLabel(event: ClubEvent, soldOut: boolean) {
+    const status = myTickets[event.id]?.status;
+    if (status === "pending") return "Payment Pending Review";
+    if (status === "approved" || status === "not_required") return "Ticket Claimed";
+    if (status === "rejected") return "Payment Rejected — Retry";
+    if (soldOut) return "Sold Out";
+    return event.price > 0 ? `Get Ticket — $${event.price.toFixed(2)}` : "Get Ticket";
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-xl font-semibold">Events</h1>
       <ul className="flex flex-col gap-2">
         {events.map((e) => {
-          const hasTicket = ticketedEventIds.has(e.id);
+          const status = myTickets[e.id]?.status;
           const claimed = ticketCounts[e.id] ?? 0;
           const soldOut = e.capacity !== null && claimed >= e.capacity;
+          const disabled =
+            (status !== undefined && status !== "rejected") || (soldOut && !status);
           return (
             <li
               key={e.id}
@@ -128,6 +201,7 @@ export default function EventsPage() {
                   {e.end_time ? ` – ${new Date(e.end_time).toLocaleString()}` : ""}
                   {e.location ? ` · ${e.location}` : ""}
                   {e.capacity !== null ? ` · ${claimed}/${e.capacity} claimed` : ""}
+                  {e.price > 0 ? ` · $${e.price.toFixed(2)}` : " · Free"}
                 </p>
                 {e.description && (
                   <p className="text-sm text-foreground/60 mt-1">{e.description}</p>
@@ -135,10 +209,10 @@ export default function EventsPage() {
               </div>
               <button
                 onClick={() => openClaimDialog(e)}
-                disabled={hasTicket || soldOut}
+                disabled={disabled}
                 className="shrink-0 bg-accent text-white rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-40"
               >
-                {hasTicket ? "Ticket Claimed" : soldOut ? "Sold Out" : "Get Ticket"}
+                {claimButtonLabel(e, soldOut)}
               </button>
             </li>
           );
@@ -155,6 +229,22 @@ export default function EventsPage() {
             className="bg-background border border-border rounded-2xl p-5 flex flex-col gap-3 max-w-sm w-full"
           >
             <p className="font-medium">Get a ticket for &ldquo;{claimingEvent.name}&rdquo;?</p>
+
+            {claimingEvent.price > 0 && (
+              <>
+                <p className="text-sm text-foreground/60">
+                  This event costs ${claimingEvent.price.toFixed(2)}. Upload a screenshot of
+                  your payment for admin review.
+                </p>
+                <input
+                  required
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPaymentFile(e.target.files?.[0] ?? null)}
+                  className="border border-border rounded-xl px-3 py-2 bg-background text-sm"
+                />
+              </>
+            )}
 
             {claimingEvent.allow_guests && (
               <>

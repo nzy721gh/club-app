@@ -16,6 +16,7 @@ const EMPTY_FORM = {
   capacity: "",
   allowGuests: false,
   maxGuestsPerPerson: 0,
+  price: "",
 };
 
 function toLocalInputValue(iso: string) {
@@ -34,6 +35,7 @@ export default function AdminEventsPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deletingEvent, setDeletingEvent] = useState<ClubEvent | null>(null);
 
   useEffect(() => {
     if (!loading && !isAdminUser(operator)) {
@@ -64,6 +66,7 @@ export default function AdminEventsPage() {
       capacity: event.capacity !== null ? String(event.capacity) : "",
       allowGuests: event.allow_guests,
       maxGuestsPerPerson: event.max_guests_per_person ?? 0,
+      price: event.price > 0 ? String(event.price) : "",
     });
   }
 
@@ -85,6 +88,7 @@ export default function AdminEventsPage() {
       allow_guests: form.allowGuests,
       max_guests_per_person:
         form.allowGuests && form.maxGuestsPerPerson > 0 ? form.maxGuestsPerPerson : null,
+      price: form.price === "" ? 0 : Number(form.price),
     };
 
     const { error } = editingId
@@ -101,14 +105,17 @@ export default function AdminEventsPage() {
     loadEvents();
   }
 
-  async function deleteEvent(id: string) {
+  async function confirmDeleteEvent() {
+    if (!deletingEvent) return;
     setError(null);
-    const { error } = await supabase.from("events").delete().eq("id", id);
+    const { error } = await supabase.from("events").delete().eq("id", deletingEvent.id);
     if (error) {
       setError(error.message);
+      setDeletingEvent(null);
       return;
     }
-    if (editingId === id) cancelEdit();
+    if (editingId === deletingEvent.id) cancelEdit();
+    setDeletingEvent(null);
     loadEvents();
   }
 
@@ -169,6 +176,15 @@ export default function AdminEventsPage() {
             placeholder="Capacity (optional, leave blank for unlimited)"
             value={form.capacity}
             onChange={(e) => setForm({ ...form, capacity: e.target.value })}
+            className="border border-border rounded-xl px-3 py-2 bg-background"
+          />
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="Price (optional, leave blank for free)"
+            value={form.price}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
             className="border border-border rounded-xl px-3 py-2 bg-background"
           />
           <label className="flex items-center gap-2 text-sm text-foreground/60">
@@ -243,11 +259,12 @@ export default function AdminEventsPage() {
                           : ""
                       }`
                     : ""}
+                  {e.price > 0 ? ` · $${e.price.toFixed(2)}` : " · Free"}
                 </p>
               </div>
               <div className="flex gap-3 shrink-0">
                 <button onClick={() => startEdit(e)} className="text-sm text-accent">Edit</button>
-                <button onClick={() => deleteEvent(e.id)} className="text-sm text-red-600">Delete</button>
+                <button onClick={() => setDeletingEvent(e)} className="text-sm text-red-600">Delete</button>
               </div>
             </li>
           ))}
@@ -256,6 +273,33 @@ export default function AdminEventsPage() {
           )}
         </ul>
       </section>
+
+      {deletingEvent && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-20">
+          <div className="bg-background border border-border rounded-2xl p-5 flex flex-col gap-3 max-w-sm w-full">
+            <p className="font-medium">
+              Delete &ldquo;{deletingEvent.name}&rdquo;?
+            </p>
+            <p className="text-sm text-foreground/60">
+              This cannot be undone. Any tickets for this event will also be deleted.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={confirmDeleteEvent}
+                className="flex-1 bg-red-600 text-white rounded-xl py-2 font-medium"
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setDeletingEvent(null)}
+                className="flex-1 border border-border rounded-xl py-2 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

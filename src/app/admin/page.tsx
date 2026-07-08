@@ -31,6 +31,13 @@ export default function AdminPage() {
         <span className="text-foreground/40">&rarr;</span>
       </Link>
       <Link
+        href="/admin/payments"
+        className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
+      >
+        Review Payments
+        <span className="text-foreground/40">&rarr;</span>
+      </Link>
+      <Link
         href="/admin/rewards"
         className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
       >
