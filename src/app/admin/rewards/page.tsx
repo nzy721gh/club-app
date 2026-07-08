@@ -53,7 +53,9 @@ export default function AdminRewardsPage() {
 
     if (rewardImage) {
       setUploadingImage(true);
-      const path = `${Date.now()}-${rewardImage.name}`;
+      const extMatch = rewardImage.name.match(/\.[a-zA-Z0-9]+$/);
+      const ext = extMatch ? extMatch[0] : ".png";
+      const path = `${Date.now()}${ext}`;
       const { error: uploadError } = await supabase.storage
         .from("reward-images")
         .upload(path, rewardImage);

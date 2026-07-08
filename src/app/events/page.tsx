@@ -95,7 +95,9 @@ export default function EventsPage() {
 
     let paymentScreenshotUrl: string | null = null;
     if (isPaid && paymentFile) {
-      const path = `${member.id}/${Date.now()}-${paymentFile.name}`;
+      const extMatch = paymentFile.name.match(/\.[a-zA-Z0-9]+$/);
+      const ext = extMatch ? extMatch[0] : ".png";
+      const path = `${member.id}/${Date.now()}${ext}`;
       const { error: uploadError } = await supabase.storage
         .from("payment-proofs")
         .upload(path, paymentFile);
