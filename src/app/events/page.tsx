@@ -15,7 +15,7 @@ export default function EventsPage() {
   const [claimingEvent, setClaimingEvent] = useState<ClubEvent | null>(null);
   const [guestCount, setGuestCount] = useState(0);
   const [guestNames, setGuestNames] = useState<string[]>([]);
-  const [paymentFile, setPaymentFile] = useState<File | null>(null);
+  const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +65,7 @@ export default function EventsPage() {
     setClaimingEvent(event);
     setGuestCount(0);
     setGuestNames([]);
-    setPaymentFile(null);
+    setPaymentFiles([]);
     setError(null);
   }
 
@@ -86,34 +86,37 @@ export default function EventsPage() {
     setError(null);
 
     const isPaid = claimingEvent.price > 0;
-    if (isPaid && !paymentFile) {
-      setError("Please upload a payment screenshot");
+    if (isPaid && paymentFiles.length === 0) {
+      setError("Please upload at least one payment screenshot");
       return;
     }
 
     setSubmitting(true);
 
-    let paymentScreenshotUrl: string | null = null;
-    if (isPaid && paymentFile) {
-      const extMatch = paymentFile.name.match(/\.[a-zA-Z0-9]+$/);
-      const ext = extMatch ? extMatch[0] : ".png";
-      const path = `${member.id}/${Date.now()}${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from("payment-proofs")
-        .upload(path, paymentFile);
+    const screenshotUrls: string[] = [];
+    if (isPaid) {
+      for (const file of paymentFiles) {
+        const extMatch = file.name.match(/\.[a-zA-Z0-9]+$/);
+        const ext = extMatch ? extMatch[0] : ".png";
+        const path = `${member.id}/${Date.now()}-${screenshotUrls.length}${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from("payment-proofs")
+          .upload(path, file);
 
-      if (uploadError) {
-        setSubmitting(false);
-        setError(uploadError.message);
-        return;
+        if (uploadError) {
+          setSubmitting(false);
+          setError(uploadError.message);
+          return;
+        }
+
+        screenshotUrls.push(
+          supabase.storage.from("payment-proofs").getPublicUrl(path).data.publicUrl
+        );
       }
-
-      paymentScreenshotUrl = supabase.storage.from("payment-proofs").getPublicUrl(path)
-        .data.publicUrl;
     }
 
     const paymentFields = isPaid
-      ? { payment_screenshot_url: paymentScreenshotUrl, payment_status: "pending" as const }
+      ? { payment_screenshot_urls: screenshotUrls, payment_status: "pending" as const }
       : {};
 
     const existing = myTickets[claimingEvent.id];
@@ -131,7 +134,7 @@ export default function EventsPage() {
     const { error } = isRetry
       ? await supabase.rpc("resubmit_payment", {
           p_ticket_id: existing.id,
-          p_screenshot_url: paymentScreenshotUrl,
+          p_screenshot_urls: screenshotUrls,
         })
       : await supabase.from("tickets").insert([
           {
@@ -238,16 +241,25 @@ export default function EventsPage() {
             {claimingEvent.price > 0 && (
               <>
                 <p className="text-sm text-foreground/60">
-                  This event costs £{claimingEvent.price.toFixed(2)}. Upload a screenshot of
-                  your payment for admin review.
+                  This event costs £{claimingEvent.price.toFixed(2)}
+                  {guestCount > 0
+                    ? ` per person (£${(claimingEvent.price * (guestCount + 1)).toFixed(2)} total for you + ${guestCount} guest${guestCount > 1 ? "s" : ""})`
+                    : ""}
+                  . Upload one or more screenshots of your payment for admin review.
                 </p>
                 <input
                   required
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setPaymentFile(e.target.files?.[0] ?? null)}
+                  multiple
+                  onChange={(e) => setPaymentFiles(Array.from(e.target.files ?? []))}
                   className="border border-border rounded-xl px-3 py-2 bg-background text-sm"
                 />
+                {paymentFiles.length > 0 && (
+                  <p className="text-xs text-foreground/40">
+                    {paymentFiles.length} file{paymentFiles.length > 1 ? "s" : ""} selected
+                  </p>
+                )}
               </>
             )}
 

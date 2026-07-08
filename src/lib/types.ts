@@ -80,7 +80,7 @@ export type Ticket = {
   member_id: string;
   status: "valid" | "used";
   guest_name: string | null;
-  payment_screenshot_url: string | null;
+  payment_screenshot_urls: string[] | null;
   payment_status: PaymentStatus;
   created_at: string;
 };
