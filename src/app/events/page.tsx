@@ -129,7 +129,10 @@ export default function EventsPage() {
       }));
 
     const { error } = isRetry
-      ? await supabase.from("tickets").update(paymentFields).eq("id", existing.id)
+      ? await supabase.rpc("resubmit_payment", {
+          p_ticket_id: existing.id,
+          p_screenshot_url: paymentScreenshotUrl,
+        })
       : await supabase.from("tickets").insert([
           {
             event_id: claimingEvent.id,
