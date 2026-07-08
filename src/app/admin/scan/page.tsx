@@ -9,6 +9,13 @@ import { isAdminUser, type ClubEvent, type Member, type PointTemplate, type Tick
 
 const SCANNER_ID = "qr-scanner-region";
 
+function isTicketUsable(t: Ticket) {
+  return (
+    t.status === "valid" &&
+    (t.payment_status === "approved" || t.payment_status === "not_required")
+  );
+}
+
 export default function ScanPage() {
   const { member: operator, loading } = useMember();
   const router = useRouter();
@@ -168,7 +175,9 @@ export default function ScanPage() {
       return;
     }
 
-    if (memberTicket && memberTicket.status === "valid") {
+    const ticketUsable = !!memberTicket && isTicketUsable(memberTicket);
+
+    if (memberTicket && ticketUsable) {
       await supabase
         .from("tickets")
         .update({ status: "used" })
@@ -177,7 +186,7 @@ export default function ScanPage() {
 
     setSubmitting(false);
     setMessage(
-      memberTicket && memberTicket.status === "valid"
+      ticketUsable
         ? `Added ${points} pts to ${target.name} and marked their ticket as used`
         : `Added ${points} pts to ${target.name}`
     );
@@ -341,16 +350,20 @@ export default function ScanPage() {
             <p
               className={`text-sm font-medium ${
                 memberTicket
-                  ? memberTicket.status === "valid"
+                  ? isTicketUsable(memberTicket)
                     ? "text-primary"
                     : "text-red-600"
                   : "text-foreground/60"
               }`}
             >
               {memberTicket
-                ? memberTicket.status === "valid"
-                  ? "1 ticket"
-                  : "Ticket used"
+                ? memberTicket.status === "used"
+                  ? "Ticket used"
+                  : memberTicket.payment_status === "pending"
+                    ? "Payment not yet approved"
+                    : memberTicket.payment_status === "rejected"
+                      ? "Payment rejected"
+                      : "1 ticket"
                 : "No ticket"}
             </p>
           )}

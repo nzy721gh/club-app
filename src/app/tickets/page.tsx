@@ -16,10 +16,12 @@ type TicketWithEvent = Ticket & {
   } | null;
 };
 
-type Category = "valid" | "expired" | "used";
+type Category = "valid" | "pending" | "expired" | "used";
 
-function getCategory(t: TicketWithEvent): Category {
+function getCategory(t: TicketWithEvent): Category | null {
+  if (t.payment_status === "rejected") return null;
   if (t.status === "used") return "used";
+  if (t.payment_status === "pending") return "pending";
   const endTime = t.events?.end_time ?? t.events?.event_time;
   if (endTime && new Date(endTime) < new Date()) return "expired";
   return "valid";
@@ -27,6 +29,7 @@ function getCategory(t: TicketWithEvent): Category {
 
 const CATEGORY_LABELS: Record<Category, string> = {
   valid: "Valid",
+  pending: "Pending",
   expired: "Expired",
   used: "Used",
 };
@@ -265,14 +268,16 @@ export default function TicketsPage() {
     return <p className="text-center text-foreground/60">Loading...</p>;
   }
 
-  const categories: Category[] = ["valid", "expired", "used"];
+  const categories: Category[] = ["valid", "pending", "expired", "used"];
   const byCategory: Record<Category, TicketWithEvent[]> = {
     valid: [],
+    pending: [],
     expired: [],
     used: [],
   };
   for (const t of tickets) {
-    byCategory[getCategory(t)].push(t);
+    const category = getCategory(t);
+    if (category) byCategory[category].push(t);
   }
 
   const activeGroups = groupByEvent(byCategory[activeCategory]);

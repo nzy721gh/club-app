@@ -182,7 +182,7 @@ export default function AdminEventsPage() {
             type="number"
             min="0"
             step="0.01"
-            placeholder="Price (optional, leave blank for free)"
+            placeholder="Price in £ (optional, leave blank for free)"
             value={form.price}
             onChange={(e) => setForm({ ...form, price: e.target.value })}
             className="border border-border rounded-xl px-3 py-2 bg-background"
@@ -259,7 +259,7 @@ export default function AdminEventsPage() {
                           : ""
                       }`
                     : ""}
-                  {e.price > 0 ? ` · $${e.price.toFixed(2)}` : " · Free"}
+                  {e.price > 0 ? ` · £${e.price.toFixed(2)}` : " · Free"}
                 </p>
               </div>
               <div className="flex gap-3 shrink-0">

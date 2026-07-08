@@ -89,7 +89,7 @@ export default function AdminPaymentsPage() {
                 {t.guest_name ? ` (guest: ${t.guest_name})` : ""}
               </p>
               <p className="text-foreground/60">
-                {t.events?.name} · ${t.events?.price?.toFixed(2)}
+                {t.events?.name} · £{t.events?.price?.toFixed(2)}
               </p>
               <p className="text-foreground/60">
                 {new Date(t.created_at).toLocaleString()}

@@ -178,7 +178,7 @@ export default function EventsPage() {
     if (status === "approved" || status === "not_required") return "Ticket Claimed";
     if (status === "rejected") return "Payment Rejected — Retry";
     if (soldOut) return "Sold Out";
-    return event.price > 0 ? `Get Ticket — $${event.price.toFixed(2)}` : "Get Ticket";
+    return event.price > 0 ? `Get Ticket — £${event.price.toFixed(2)}` : "Get Ticket";
   }
 
   return (
@@ -203,7 +203,7 @@ export default function EventsPage() {
                   {e.end_time ? ` – ${new Date(e.end_time).toLocaleString()}` : ""}
                   {e.location ? ` · ${e.location}` : ""}
                   {e.capacity !== null ? ` · ${claimed}/${e.capacity} claimed` : ""}
-                  {e.price > 0 ? ` · $${e.price.toFixed(2)}` : " · Free"}
+                  {e.price > 0 ? ` · £${e.price.toFixed(2)}` : " · Free"}
                 </p>
                 {e.description && (
                   <p className="text-sm text-foreground/60 mt-1">{e.description}</p>
@@ -235,7 +235,7 @@ export default function EventsPage() {
             {claimingEvent.price > 0 && (
               <>
                 <p className="text-sm text-foreground/60">
-                  This event costs ${claimingEvent.price.toFixed(2)}. Upload a screenshot of
+                  This event costs £{claimingEvent.price.toFixed(2)}. Upload a screenshot of
                   your payment for admin review.
                 </p>
                 <input
