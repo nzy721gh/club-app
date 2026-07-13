@@ -46,6 +46,7 @@ export default function EventsPage() {
   const [myTickets, setMyTickets] = useState<Record<string, { id: string; status: PaymentStatus }>>({});
   const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({});
   const [claimingEvent, setClaimingEvent] = useState<ClubEvent | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [guestCount, setGuestCount] = useState(0);
   const [guestNames, setGuestNames] = useState<string[]>([]);
   const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
@@ -88,20 +89,42 @@ export default function EventsPage() {
     setTicketCounts(counts);
   }
 
+  async function refreshAll() {
+    await Promise.all([loadTickets(), loadTicketCounts()]);
+  }
+
   useEffect(() => {
     if (!member) return;
     loadEvents();
-    loadTickets();
-    loadTicketCounts();
+    refreshAll();
   }, [member]);
 
-  function openClaimDialog(event: ClubEvent) {
+  async function openClaimDialog(event: ClubEvent) {
     setClaimingEvent(event);
-    setGuestCount(0);
-    setGuestNames([]);
     setPaymentFiles([]);
     setShowPaymentDetails(false);
     setError(null);
+
+    const existing = myTickets[event.id];
+    const editable =
+      existing && (existing.status === "pending" || existing.status === "rejected");
+
+    if (editable) {
+      setIsEditing(true);
+      const { data } = await supabase
+        .from("tickets")
+        .select("guest_name")
+        .eq("event_id", event.id)
+        .eq("member_id", member!.id)
+        .not("guest_name", "is", null);
+      const names = (data ?? []).map((r) => r.guest_name as string);
+      setGuestCount(names.length);
+      setGuestNames(names);
+    } else {
+      setIsEditing(false);
+      setGuestCount(0);
+      setGuestNames([]);
+    }
   }
 
   function changeGuestCount(delta: number) {
@@ -150,62 +173,42 @@ export default function EventsPage() {
       }
     }
 
-    const paymentFields = isPaid
-      ? { payment_screenshot_urls: screenshotUrls, payment_status: "pending" as const }
-      : {};
+    const guestNameList = guestNames.map((n) => n.trim()).filter(Boolean);
 
-    const existing = myTickets[claimingEvent.id];
-    const isRetry = existing?.status === "rejected";
+    let error: string | null = null;
 
-    const guestRows = guestNames
-      .filter((name) => name.trim())
-      .map((name) => ({
-        event_id: claimingEvent.id,
-        member_id: member.id,
-        guest_name: name.trim(),
-        ...paymentFields,
-      }));
-
-    const { error } = isRetry
-      ? await supabase.rpc("resubmit_payment", {
-          p_ticket_id: existing.id,
-          p_screenshot_urls: screenshotUrls,
-        })
-      : await supabase.from("tickets").insert([
-          {
-            event_id: claimingEvent.id,
-            member_id: member.id,
-            guest_name: null as string | null,
-            ...paymentFields,
-          },
-          ...guestRows,
-        ]);
-
-    const rowCount = guestRows.length + 1;
-
-    if (!error && guestRows.length > 0 && isRetry) {
-      await supabase.from("tickets").insert(guestRows);
+    if (isEditing) {
+      const { error: rpcError } = await supabase.rpc("update_booking", {
+        p_event_id: claimingEvent.id,
+        p_guest_names: guestNameList,
+        p_screenshot_urls: screenshotUrls,
+      });
+      error = rpcError?.message ?? null;
+    } else {
+      const paymentFields = isPaid
+        ? { payment_screenshot_urls: screenshotUrls, payment_status: "pending" as const }
+        : {};
+      const rows = [
+        { event_id: claimingEvent.id, member_id: member.id, guest_name: null as string | null, ...paymentFields },
+        ...guestNameList.map((name) => ({
+          event_id: claimingEvent.id,
+          member_id: member.id,
+          guest_name: name,
+          ...paymentFields,
+        })),
+      ];
+      const { error: insertError } = await supabase.from("tickets").insert(rows);
+      error = insertError?.message ?? null;
     }
 
     setSubmitting(false);
 
     if (error) {
-      setError(error.message);
+      setError(error);
       return;
     }
 
-    setMyTickets({
-      ...myTickets,
-      [claimingEvent.id]: {
-        id: existing?.id ?? "",
-        status: isPaid ? "pending" : "not_required",
-      },
-    });
-    const newlyAddedRows = isRetry ? guestRows.length : rowCount;
-    setTicketCounts({
-      ...ticketCounts,
-      [claimingEvent.id]: (ticketCounts[claimingEvent.id] ?? 0) + newlyAddedRows,
-    });
+    await refreshAll();
     setClaimingEvent(null);
   }
 
@@ -215,9 +218,9 @@ export default function EventsPage() {
 
   function claimButtonLabel(event: ClubEvent, soldOut: boolean) {
     const status = myTickets[event.id]?.status;
-    if (status === "pending") return "Payment Pending Review";
+    if (status === "pending") return "Payment Pending — Edit";
     if (status === "approved" || status === "not_required") return "Ticket Claimed";
-    if (status === "rejected") return "Payment Rejected — Retry";
+    if (status === "rejected") return "Payment Rejected — Edit & Retry";
     if (soldOut) return "Sold Out";
     return event.price > 0 ? `Get Ticket — £${event.price.toFixed(2)}` : "Get Ticket";
   }
@@ -231,7 +234,9 @@ export default function EventsPage() {
           const claimed = ticketCounts[e.id] ?? 0;
           const soldOut = e.capacity !== null && claimed >= e.capacity;
           const disabled =
-            (status !== undefined && status !== "rejected") || (soldOut && !status);
+            status === "approved" ||
+            status === "not_required" ||
+            (soldOut && !status);
           return (
             <li
               key={e.id}
@@ -271,7 +276,9 @@ export default function EventsPage() {
             onSubmit={confirmClaim}
             className="bg-background border border-border rounded-2xl p-5 flex flex-col gap-3 max-w-sm w-full"
           >
-            <p className="font-medium">Get a ticket for &ldquo;{claimingEvent.name}&rdquo;?</p>
+            <p className="font-medium">
+              {isEditing ? "Edit your submission for" : "Get a ticket for"} &ldquo;{claimingEvent.name}&rdquo;?
+            </p>
 
             {claimingEvent.price > 0 && (
               <>
@@ -365,7 +372,7 @@ export default function EventsPage() {
                 disabled={submitting}
                 className="flex-1 bg-accent text-white rounded-xl py-2 font-medium disabled:opacity-50"
               >
-                {submitting ? "Claiming..." : "Confirm"}
+                {submitting ? "Submitting..." : isEditing ? "Save Changes" : "Confirm"}
               </button>
               <button
                 type="button"
