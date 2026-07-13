@@ -8,7 +8,7 @@ import type { ClubEvent, PaymentStatus } from "@/lib/types";
 
 // TODO: replace with the club's real bank details
 const PAYMENT_ACCOUNT = {
-  name: "University of Kent Club Society",
+  name: "Account Name",
   sortCode: "12-34-56",
   accountNumber: "12345678",
 };
