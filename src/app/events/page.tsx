@@ -6,6 +6,39 @@ import { supabase } from "@/lib/supabase";
 import { useMember } from "@/lib/use-member";
 import type { ClubEvent, PaymentStatus } from "@/lib/types";
 
+// TODO: replace with the club's real bank details
+const PAYMENT_ACCOUNT = {
+  name: "University of Kent Club Society",
+  sortCode: "12-34-56",
+  accountNumber: "12345678",
+};
+
+function CopyField({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div className="flex items-center justify-between border border-border rounded-xl px-3 py-2">
+      <div>
+        <p className="text-xs text-foreground/60">{label}</p>
+        <p className="text-sm font-medium">{value}</p>
+      </div>
+      <button
+        type="button"
+        onClick={copy}
+        className="text-sm text-accent font-medium shrink-0"
+      >
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
 export default function EventsPage() {
   const { member, loading } = useMember();
   const router = useRouter();
@@ -16,6 +49,7 @@ export default function EventsPage() {
   const [guestCount, setGuestCount] = useState(0);
   const [guestNames, setGuestNames] = useState<string[]>([]);
   const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
+  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +100,7 @@ export default function EventsPage() {
     setGuestCount(0);
     setGuestNames([]);
     setPaymentFiles([]);
+    setShowPaymentDetails(false);
     setError(null);
   }
 
@@ -247,6 +282,23 @@ export default function EventsPage() {
                     : ""}
                   . Upload one or more screenshots of your payment for admin review.
                 </p>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentDetails(!showPaymentDetails)}
+                  className="text-sm text-accent font-medium text-left"
+                >
+                  {showPaymentDetails ? "Hide payment details" : "Show payment details"}
+                </button>
+
+                {showPaymentDetails && (
+                  <div className="flex flex-col gap-2">
+                    <CopyField label="Account Name" value={PAYMENT_ACCOUNT.name} />
+                    <CopyField label="Sort Code" value={PAYMENT_ACCOUNT.sortCode} />
+                    <CopyField label="Account Number" value={PAYMENT_ACCOUNT.accountNumber} />
+                  </div>
+                )}
+
                 <input
                   required
                   type="file"
