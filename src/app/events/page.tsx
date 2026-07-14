@@ -397,7 +397,7 @@ export default function EventsPage() {
                   <input
                     key={i}
                     required
-                    placeholder={`Guest name ${i + 1}`}
+                    placeholder={`Guest name ${existingGuestCount + i + 1}`}
                     value={name}
                     onChange={(e) =>
                       setGuestNames((names) =>
