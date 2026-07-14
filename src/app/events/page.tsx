@@ -43,7 +43,9 @@ export default function EventsPage() {
   const { member, loading } = useMember();
   const router = useRouter();
   const [events, setEvents] = useState<ClubEvent[]>([]);
-  const [myTickets, setMyTickets] = useState<Record<string, { id: string; status: PaymentStatus }>>({});
+  const [myTickets, setMyTickets] = useState<
+    Record<string, { id: string; status: PaymentStatus; guestCount: number }>
+  >({});
   const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({});
   const [claimingEvent, setClaimingEvent] = useState<ClubEvent | null>(null);
   const [mode, setMode] = useState<"new" | "edit" | "addGuest">("new");
@@ -71,12 +73,21 @@ export default function EventsPage() {
     if (!member) return;
     const { data } = await supabase
       .from("tickets")
-      .select("id, event_id, payment_status")
-      .eq("member_id", member.id)
-      .is("guest_name", null);
-    const map: Record<string, { id: string; status: PaymentStatus }> = {};
+      .select("id, event_id, payment_status, guest_name")
+      .eq("member_id", member.id);
+    const map: Record<string, { id: string; status: PaymentStatus; guestCount: number }> = {};
     for (const row of data ?? []) {
-      map[row.event_id] = { id: row.id, status: row.payment_status };
+      if (row.guest_name === null) {
+        const existing = map[row.event_id];
+        map[row.event_id] = {
+          id: row.id,
+          status: row.payment_status,
+          guestCount: existing?.guestCount ?? 0,
+        };
+      } else {
+        const existing = map[row.event_id] ?? { id: "", status: "not_required" as PaymentStatus, guestCount: 0 };
+        map[row.event_id] = { ...existing, guestCount: existing.guestCount + 1 };
+      }
     }
     setMyTickets(map);
   }
@@ -246,10 +257,12 @@ export default function EventsPage() {
   }
 
   function claimButtonLabel(event: ClubEvent, soldOut: boolean) {
-    const status = myTickets[event.id]?.status;
-    if (status === "pending") return "Payment Pending — Edit";
-    if (status === "approved" || status === "not_required") return "Ticket Claimed";
-    if (status === "rejected") return "Payment Rejected — Edit & Retry";
+    const ticket = myTickets[event.id];
+    const status = ticket?.status;
+    const countSuffix = ticket && ticket.guestCount > 0 ? ` (1+${ticket.guestCount})` : "";
+    if (status === "pending") return `Payment Pending — Edit${countSuffix}`;
+    if (status === "approved" || status === "not_required") return `Ticket Claimed${countSuffix}`;
+    if (status === "rejected") return `Payment Rejected — Edit & Retry${countSuffix}`;
     if (soldOut) return "Sold Out";
     return event.price > 0 ? `Get Ticket — £${event.price.toFixed(2)}` : "Get Ticket";
   }
@@ -329,10 +342,14 @@ export default function EventsPage() {
             {claimingEvent.price > 0 && (
               <>
                 <p className="text-sm text-foreground/60">
-                  This event costs £{claimingEvent.price.toFixed(2)}
-                  {guestCount > 0
-                    ? ` per person (£${(claimingEvent.price * (guestCount + 1)).toFixed(2)} total for you + ${guestCount} guest${guestCount > 1 ? "s" : ""})`
-                    : ""}
+                  This event costs £{claimingEvent.price.toFixed(2)} per person
+                  {mode === "addGuest"
+                    ? guestCount > 0
+                      ? ` (£${(claimingEvent.price * guestCount).toFixed(2)} total for ${guestCount} guest${guestCount > 1 ? "s" : ""})`
+                      : ""
+                    : guestCount > 0
+                      ? ` (£${(claimingEvent.price * (guestCount + 1)).toFixed(2)} total for you + ${guestCount} guest${guestCount > 1 ? "s" : ""})`
+                      : ""}
                   . Upload one or more screenshots of your payment for admin review.
                 </p>
 
