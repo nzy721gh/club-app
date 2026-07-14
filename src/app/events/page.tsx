@@ -46,7 +46,8 @@ export default function EventsPage() {
   const [myTickets, setMyTickets] = useState<Record<string, { id: string; status: PaymentStatus }>>({});
   const [ticketCounts, setTicketCounts] = useState<Record<string, number>>({});
   const [claimingEvent, setClaimingEvent] = useState<ClubEvent | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [mode, setMode] = useState<"new" | "edit" | "addGuest">("new");
+  const [existingGuestCount, setExistingGuestCount] = useState(0);
   const [guestCount, setGuestCount] = useState(0);
   const [guestNames, setGuestNames] = useState<string[]>([]);
   const [paymentFiles, setPaymentFiles] = useState<File[]>([]);
@@ -103,14 +104,17 @@ export default function EventsPage() {
     setClaimingEvent(event);
     setPaymentFiles([]);
     setShowPaymentDetails(false);
+    setExistingGuestCount(0);
     setError(null);
 
     const existing = myTickets[event.id];
     const editable =
       existing && (existing.status === "pending" || existing.status === "rejected");
+    const canAddMore =
+      existing && (existing.status === "approved" || existing.status === "not_required");
 
     if (editable) {
-      setIsEditing(true);
+      setMode("edit");
       const { data } = await supabase
         .from("tickets")
         .select("guest_name")
@@ -120,8 +124,19 @@ export default function EventsPage() {
       const names = (data ?? []).map((r) => r.guest_name as string);
       setGuestCount(names.length);
       setGuestNames(names);
+    } else if (canAddMore) {
+      setMode("addGuest");
+      const { count } = await supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", event.id)
+        .eq("member_id", member!.id)
+        .not("guest_name", "is", null);
+      setExistingGuestCount(count ?? 0);
+      setGuestCount(0);
+      setGuestNames([]);
     } else {
-      setIsEditing(false);
+      setMode("new");
       setGuestCount(0);
       setGuestNames([]);
     }
@@ -129,7 +144,8 @@ export default function EventsPage() {
 
   function changeGuestCount(delta: number) {
     const max = claimingEvent?.max_guests_per_person;
-    const next = Math.max(0, Math.min(max ?? Infinity, guestCount + delta));
+    const remaining = max !== null && max !== undefined ? max - existingGuestCount : Infinity;
+    const next = Math.max(0, Math.min(remaining, guestCount + delta));
     setGuestCount(next);
     setGuestNames((names) => {
       const updated = names.slice(0, next);
@@ -146,6 +162,10 @@ export default function EventsPage() {
     const isPaid = claimingEvent.price > 0;
     if (isPaid && paymentFiles.length === 0) {
       setError("Please upload at least one payment screenshot");
+      return;
+    }
+    if (mode === "addGuest" && guestCount === 0) {
+      setError("Add at least one guest");
       return;
     }
 
@@ -176,18 +196,27 @@ export default function EventsPage() {
     const guestNameList = guestNames.map((n) => n.trim()).filter(Boolean);
 
     let error: string | null = null;
+    const paymentFields = isPaid
+      ? { payment_screenshot_urls: screenshotUrls, payment_status: "pending" as const }
+      : {};
 
-    if (isEditing) {
+    if (mode === "edit") {
       const { error: rpcError } = await supabase.rpc("update_booking", {
         p_event_id: claimingEvent.id,
         p_guest_names: guestNameList,
         p_screenshot_urls: screenshotUrls,
       });
       error = rpcError?.message ?? null;
+    } else if (mode === "addGuest") {
+      const rows = guestNameList.map((name) => ({
+        event_id: claimingEvent.id,
+        member_id: member.id,
+        guest_name: name,
+        ...paymentFields,
+      }));
+      const { error: insertError } = await supabase.from("tickets").insert(rows);
+      error = insertError?.message ?? null;
     } else {
-      const paymentFields = isPaid
-        ? { payment_screenshot_urls: screenshotUrls, payment_status: "pending" as const }
-        : {};
       const rows = [
         { event_id: claimingEvent.id, member_id: member.id, guest_name: null as string | null, ...paymentFields },
         ...guestNameList.map((name) => ({
@@ -255,13 +284,25 @@ export default function EventsPage() {
                   <p className="text-sm text-foreground/60 mt-1">{e.description}</p>
                 )}
               </div>
-              <button
-                onClick={() => openClaimDialog(e)}
-                disabled={disabled}
-                className="shrink-0 bg-accent text-white rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-40"
-              >
-                {claimButtonLabel(e, soldOut)}
-              </button>
+              <div className="flex flex-col gap-1 items-end shrink-0">
+                <button
+                  onClick={() => openClaimDialog(e)}
+                  disabled={disabled}
+                  className="shrink-0 bg-accent text-white rounded-xl px-3 py-2 text-sm font-medium disabled:opacity-40"
+                >
+                  {claimButtonLabel(e, soldOut)}
+                </button>
+                {(status === "approved" || status === "not_required") &&
+                  e.allow_guests &&
+                  !soldOut && (
+                    <button
+                      onClick={() => openClaimDialog(e)}
+                      className="text-xs text-accent font-medium"
+                    >
+                      + Add Guest
+                    </button>
+                  )}
+              </div>
             </li>
           );
         })}
@@ -277,7 +318,12 @@ export default function EventsPage() {
             className="bg-background border border-border rounded-2xl p-5 flex flex-col gap-3 max-w-sm w-full"
           >
             <p className="font-medium">
-              {isEditing ? "Edit your submission for" : "Get a ticket for"} &ldquo;{claimingEvent.name}&rdquo;?
+              {mode === "edit"
+                ? "Edit your submission for"
+                : mode === "addGuest"
+                  ? "Add guests for"
+                  : "Get a ticket for"}{" "}
+              &ldquo;{claimingEvent.name}&rdquo;?
             </p>
 
             {claimingEvent.price > 0 && (
@@ -372,7 +418,13 @@ export default function EventsPage() {
                 disabled={submitting}
                 className="flex-1 bg-accent text-white rounded-xl py-2 font-medium disabled:opacity-50"
               >
-                {submitting ? "Submitting..." : isEditing ? "Save Changes" : "Confirm"}
+                {submitting
+                  ? "Submitting..."
+                  : mode === "edit"
+                    ? "Save Changes"
+                    : mode === "addGuest"
+                      ? "Add Guests"
+                      : "Confirm"}
               </button>
               <button
                 type="button"
