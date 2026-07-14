@@ -339,51 +339,50 @@ export default function EventsPage() {
               &ldquo;{claimingEvent.name}&rdquo;?
             </p>
 
-            {claimingEvent.price > 0 && (
-              <>
-                <p className="text-sm text-foreground/60">
-                  This event costs £{claimingEvent.price.toFixed(2)} per person
-                  {mode === "addGuest"
-                    ? guestCount > 0
-                      ? ` (£${(claimingEvent.price * guestCount).toFixed(2)} total for ${guestCount} guest${guestCount > 1 ? "s" : ""})`
-                      : ""
-                    : guestCount > 0
-                      ? ` (£${(claimingEvent.price * (guestCount + 1)).toFixed(2)} total for you + ${guestCount} guest${guestCount > 1 ? "s" : ""})`
-                      : ""}
-                  . Upload one or more screenshots of your payment for admin review.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => setShowPaymentDetails(!showPaymentDetails)}
-                  className="text-sm text-accent font-medium text-left"
-                >
-                  {showPaymentDetails ? "Hide payment details" : "Show payment details"}
-                </button>
-
-                {showPaymentDetails && (
-                  <div className="flex flex-col gap-2">
-                    <CopyField label="Account Name" value={PAYMENT_ACCOUNT.name} />
-                    <CopyField label="Sort Code" value={PAYMENT_ACCOUNT.sortCode} />
-                    <CopyField label="Account Number" value={PAYMENT_ACCOUNT.accountNumber} />
+            {claimingEvent.price > 0 && (() => {
+              const payingHeads = mode === "addGuest" ? guestCount : guestCount + 1;
+              const total = claimingEvent.price * payingHeads;
+              return (
+                <>
+                  <div className="border border-accent rounded-xl px-4 py-3 flex items-center justify-between bg-accent/10">
+                    <span className="text-sm text-foreground/60">
+                      {mode === "addGuest"
+                        ? `${guestCount} guest${guestCount > 1 ? "s" : ""} × £${claimingEvent.price.toFixed(2)}`
+                        : `You${guestCount > 0 ? ` + ${guestCount} guest${guestCount > 1 ? "s" : ""}` : ""} × £${claimingEvent.price.toFixed(2)}`}
+                    </span>
+                    <span className="text-xl font-bold text-accent">
+                      £{total.toFixed(2)}
+                    </span>
                   </div>
-                )}
 
-                <input
-                  required
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => setPaymentFiles(Array.from(e.target.files ?? []))}
-                  className="border border-border rounded-xl px-3 py-2 bg-background text-sm"
-                />
-                {paymentFiles.length > 0 && (
-                  <p className="text-xs text-foreground/40">
-                    {paymentFiles.length} file{paymentFiles.length > 1 ? "s" : ""} selected
+                  <p className="text-sm text-foreground/60">
+                    Upload one or more screenshots of your payment for admin review.
                   </p>
-                )}
-              </>
-            )}
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPaymentDetails(true)}
+                    className="text-sm text-accent font-medium text-left"
+                  >
+                    View payment details
+                  </button>
+
+                  <input
+                    required
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => setPaymentFiles(Array.from(e.target.files ?? []))}
+                    className="border border-border rounded-xl px-3 py-2 bg-background text-sm"
+                  />
+                  {paymentFiles.length > 0 && (
+                    <p className="text-xs text-foreground/40">
+                      {paymentFiles.length} file{paymentFiles.length > 1 ? "s" : ""} selected
+                    </p>
+                  )}
+                </>
+              );
+            })()}
 
             {claimingEvent.allow_guests && (
               <>
@@ -452,6 +451,34 @@ export default function EventsPage() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {showPaymentDetails && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-30">
+          <div className="bg-background border border-border rounded-2xl p-5 flex flex-col gap-3 max-w-xs w-full">
+            <div className="flex items-center justify-between">
+              <p className="font-medium">Payment Details</p>
+              <button
+                type="button"
+                onClick={() => setShowPaymentDetails(false)}
+                className="text-foreground/60 text-xl leading-none"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+            <CopyField label="Account Name" value={PAYMENT_ACCOUNT.name} />
+            <CopyField label="Sort Code" value={PAYMENT_ACCOUNT.sortCode} />
+            <CopyField label="Account Number" value={PAYMENT_ACCOUNT.accountNumber} />
+            <button
+              type="button"
+              onClick={() => setShowPaymentDetails(false)}
+              className="border border-border rounded-xl py-2 font-medium"
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
     </div>
