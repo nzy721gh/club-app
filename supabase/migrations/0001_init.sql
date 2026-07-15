@@ -1,6 +1,6 @@
 -- 社团会员积分系统 数据库结构
 -- 在 Supabase SQL editor 中直接执行本文件即可完成初始化
-
+--
 create extension if not exists "pgcrypto";
 
 -- 会员表，id 与 auth.users.id 一一对应
