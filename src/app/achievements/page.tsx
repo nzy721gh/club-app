@@ -21,13 +21,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
 
-    if (
-      mode === "signup" &&
-      !email.toLowerCase().endsWith(`@${ALLOWED_EMAIL_DOMAIN}`)
-    ) {
-      setError(`Only @${ALLOWED_EMAIL_DOMAIN} emails are allowed to sign up`);
-      return;
-    }
+
 
     setLoading(true);
 
