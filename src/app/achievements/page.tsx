@@ -1,111 +1,76 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useMember } from "@/lib/use-member";
+import type { Achievement } from "@/lib/types";
 
-
-
-export default function LoginPage() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [studentId, setStudentId] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
+export default function AchievementsPage() {
+  const { member, loading } = useMember();
   const router = useRouter();
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [unlockedIds, setUnlockedIds] = useState<Set<string>>(new Set());
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-
-
-
-    setLoading(true);
-
-    const { error } =
-      mode === "signin"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({
-            email,
-            password,
-            options: { data: { name, student_id: studentId } },
-          });
-
-    setLoading(false);
-
-    if (error) {
-      setError(error.message);
-      return;
+  useEffect(() => {
+    if (!loading && !member) {
+      router.push("/login");
     }
+  }, [loading, member, router]);
 
-    router.push("/me");
+  useEffect(() => {
+    if (!member) return;
+
+    supabase
+      .from("achievements")
+      .select("*")
+      .order("threshold", { ascending: true })
+      .then(({ data }) => setAchievements(data ?? []));
+
+    supabase
+      .from("member_achievements")
+      .select("achievement_id")
+      .eq("member_id", member.id)
+      .then(({ data }) => {
+        setUnlockedIds(new Set((data ?? []).map((r) => r.achievement_id)));
+      });
+  }, [member]);
+
+  if (loading || !member) {
+    return <p className="text-center text-foreground/60">Loading...</p>;
   }
 
   return (
-    <div className="flex flex-col gap-6 pt-10">
-      <h1 className="text-xl font-semibold">
-        {mode === "signin" ? "Sign In" : "Sign Up"} to Your Club Account
-      </h1>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        {mode === "signup" && (
-          <input
-            required
-            placeholder="Name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="border border-border rounded-xl px-3 py-2 bg-background"
-          />
+    <div className="flex flex-col gap-4">
+      <h1 className="text-xl font-semibold">Achievements</h1>
+      <ul className="flex flex-col gap-2">
+        {achievements.map((a) => {
+          const unlocked = unlockedIds.has(a.id);
+          return (
+            <li
+              key={a.id}
+              className={`border border-border rounded-xl px-4 py-3 flex items-center justify-between ${
+                unlocked ? "" : "opacity-40"
+              }`}
+            >
+              <div>
+                <p className="font-medium">{a.name}</p>
+                {a.description && (
+                  <p className="text-sm text-foreground/60">
+                    {a.description}
+                  </p>
+                )}
+              </div>
+              <span className="text-sm text-primary font-medium">
+                {unlocked ? "Unlocked" : `Needs ${a.threshold} pts`}
+              </span>
+            </li>
+          );
+        })}
+        {achievements.length === 0 && (
+          <p className="text-sm text-foreground/60">No achievements yet</p>
         )}
-
-        <input
-          required
-          placeholder="Kent ID"
-          value={studentId}
-          onChange={(e) => setStudentId(e.target.value)}
-          className="border border-border rounded-xl px-3 py-2 bg-background"
-        />
-
-        <input
-          required
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="border border-border rounded-xl px-3 py-2 bg-background"
-        />
-
-        <input
-          required
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="border border-border rounded-xl px-3 py-2 bg-background"
-        />
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="bg-accent text-white rounded-xl py-2 font-medium disabled:opacity-50"
-        >
-          {loading ? "Processing..." : mode === "signin" ? "Sign In" : "Sign Up"}
-        </button>
-      </form>
-
-      <button
-        onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-        className="text-sm text-foreground/60"
-      >
-        {mode === "signin"
-          ? "Don't have an account? Sign up"
-          : "Already have an account? Sign in"}
-      </button>
+      </ul>
     </div>
   );
 }
