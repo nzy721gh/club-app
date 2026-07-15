@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
-const ALLOWED_EMAIL_DOMAIN = "gmail.com";
+
 
 export default function LoginPage() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
