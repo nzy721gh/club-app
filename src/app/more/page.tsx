@@ -20,18 +20,22 @@ export default function MorePage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">More</h1>
+    <div className="page-stack">
+      <div className="page-header">
+        <p className="eyebrow">Club hub</p>
+        <h1 className="page-title">More</h1>
+        <p className="page-subtitle">Explore rewards, achievements, and extra tools for your club account.</p>
+      </div>
       <Link
         href="/rewards"
-        className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
+        className="soft-card flex items-center justify-between px-5 py-4 font-bold transition hover:-translate-y-0.5 hover:border-accent/70 hover:shadow-lg"
       >
         Rewards
         <span className="text-foreground/40">&rarr;</span>
       </Link>
       <Link
         href="/achievements"
-        className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
+        className="soft-card flex items-center justify-between px-5 py-4 font-bold transition hover:-translate-y-0.5 hover:border-accent/70 hover:shadow-lg"
       >
         Achievements
         <span className="text-foreground/40">&rarr;</span>

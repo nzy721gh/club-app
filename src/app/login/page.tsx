@@ -44,12 +44,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 pt-10">
-      <h1 className="text-xl font-semibold">
-        {mode === "signin" ? "Sign In" : "Sign Up"} to Your Club Account
-      </h1>
+    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center gap-6">
+      <div className="page-header text-center">
+        <p className="eyebrow">Welcome back</p>
+        <h1 className="page-title">
+          {mode === "signin" ? "Sign in" : "Create your account"}
+        </h1>
+        <p className="page-subtitle">Track points, claim tickets, unlock achievements, and redeem club rewards.</p>
+      </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+      <form onSubmit={handleSubmit} className="surface-card flex flex-col gap-3 p-5 sm:p-6">
         {mode === "signup" && (
           <>
             <input
@@ -57,14 +61,14 @@ export default function LoginPage() {
               placeholder="Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="border border-border rounded-xl px-3 py-2 bg-background"
+              className="form-input"
             />
             <input
               required
               placeholder="Kent ID"
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
-              className="border border-border rounded-xl px-3 py-2 bg-background"
+              className="form-input"
             />
           </>
         )}
@@ -74,7 +78,7 @@ export default function LoginPage() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="border border-border rounded-xl px-3 py-2 bg-background"
+          className="form-input"
         />
         <input
           required
@@ -82,7 +86,7 @@ export default function LoginPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="border border-border rounded-xl px-3 py-2 bg-background"
+          className="form-input"
         />
 
         {error && <p className="text-sm text-red-600">{error}</p>}
@@ -90,7 +94,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="bg-accent text-white rounded-xl py-2 font-medium disabled:opacity-50"
+          className="primary-button"
         >
           {loading ? "Processing..." : mode === "signin" ? "Sign In" : "Sign Up"}
         </button>
@@ -98,7 +102,7 @@ export default function LoginPage() {
 
       <button
         onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-        className="text-sm text-foreground/60"
+        className="text-sm font-medium text-foreground/60 transition hover:text-accent"
       >
         {mode === "signin" ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
       </button>

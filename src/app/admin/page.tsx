@@ -21,39 +21,43 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-xl font-semibold">Admin</h1>
+    <div className="page-stack">
+      <div className="page-header">
+        <p className="eyebrow">Club hub</p>
+        <h1 className="page-title">Admin</h1>
+        <p className="page-subtitle">Manage the club experience from one clear control panel.</p>
+      </div>
       <Link
         href="/admin/events"
-        className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
+        className="soft-card flex items-center justify-between px-5 py-4 font-bold transition hover:-translate-y-0.5 hover:border-accent/70 hover:shadow-lg"
       >
         Manage Events
         <span className="text-foreground/40">&rarr;</span>
       </Link>
       <Link
         href="/admin/payments"
-        className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
+        className="soft-card flex items-center justify-between px-5 py-4 font-bold transition hover:-translate-y-0.5 hover:border-accent/70 hover:shadow-lg"
       >
         Review Payments
         <span className="text-foreground/40">&rarr;</span>
       </Link>
       <Link
         href="/admin/rewards"
-        className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
+        className="soft-card flex items-center justify-between px-5 py-4 font-bold transition hover:-translate-y-0.5 hover:border-accent/70 hover:shadow-lg"
       >
         Manage Rewards
         <span className="text-foreground/40">&rarr;</span>
       </Link>
       <Link
         href="/admin/achievements"
-        className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
+        className="soft-card flex items-center justify-between px-5 py-4 font-bold transition hover:-translate-y-0.5 hover:border-accent/70 hover:shadow-lg"
       >
         Manage Achievements
         <span className="text-foreground/40">&rarr;</span>
       </Link>
       <Link
         href="/admin/members"
-        className="border border-border rounded-xl px-4 py-3 flex items-center justify-between font-medium hover:border-accent"
+        className="soft-card flex items-center justify-between px-5 py-4 font-bold transition hover:-translate-y-0.5 hover:border-accent/70 hover:shadow-lg"
       >
         Manage Members
         <span className="text-foreground/40">&rarr;</span>

@@ -49,17 +49,22 @@ export default function MePage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex justify-end">
+    <div className="page-stack">
+      <div className="flex items-start justify-between gap-4">
+        <div className="page-header">
+          <p className="eyebrow">Member pass</p>
+          <h1 className="page-title">Hi, {member.name.split(" ")[0]}</h1>
+          <p className="page-subtitle">Show your QR code at events to earn points and validate your membership.</p>
+        </div>
         <Link
           href="/settings"
-          className="text-sm text-foreground/60 hover:text-accent"
+          className="secondary-button !px-3 !py-2"
         >
           Settings
         </Link>
       </div>
 
-      <div className="relative flex flex-col items-center gap-3 border border-border rounded-2xl p-6">
+      <div className="surface-card relative flex flex-col items-center gap-3 overflow-hidden p-6 sm:p-8">
         {member.membership_tier === "committee" && (
           <span className="bg-primary text-white text-sm font-bold tracking-wide px-4 py-1.5 rounded-full shadow mb-3">
             COMMITTEE
@@ -70,10 +75,10 @@ export default function MePage() {
             PAID MEMBER
           </span>
         )}
-        <QRCodeCanvas ref={qrCanvasRef} value={`member:${member.id}`} size={180} />
+        <div className="rounded-3xl bg-white p-4 shadow-inner"><QRCodeCanvas ref={qrCanvasRef} value={`member:${member.id}`} size={180} /></div>
         <p className="font-semibold text-lg">{member.name}</p>
-        <p className="text-3xl font-bold text-accent">{member.points}</p>
-        <p className="text-sm text-foreground/60">Points</p>
+        <p className="text-5xl font-black tracking-tight text-accent">{member.points}</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-foreground/45">Points</p>
 
         <button
           onClick={downloadQrCode}
@@ -100,9 +105,9 @@ export default function MePage() {
       <div>
         <button
           onClick={() => setShowAllHistory(!showAllHistory)}
-          className="w-full flex items-center justify-between mb-3"
+          className="mb-3 flex w-full items-center justify-between"
         >
-          <h2 className="font-semibold">Points History</h2>
+          <h2 className="text-lg font-bold">Points History</h2>
           <span
             className={`text-foreground/40 transition-transform ${
               showAllHistory ? "rotate-90" : ""
@@ -115,7 +120,7 @@ export default function MePage() {
           {(showAllHistory ? pointLogs : pointLogs.slice(0, 3)).map((log) => (
             <li
               key={log.id}
-              className="border border-border rounded-xl px-4 py-3 flex items-center justify-between"
+              className="soft-card flex items-center justify-between px-4 py-3"
             >
               <div>
                 <p className="font-medium">{log.reason}</p>
